@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+	<property name="logPattern" value="%d %-5level %logger{35} - %msg%n" />
+	<property name="logEncoding" value="UTF-8" />
+	<property name="logDirectory" value="log" />
+	
+	
+	<appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <layout class="ch.qos.logback.classic.PatternLayout">
+            <Pattern>
+                %d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n
+            </Pattern>
+        </layout>
+    </appender>
+
+	<appender name="fileAppender"
+		class="ch.qos.logback.core.rolling.RollingFileAppender">
+		<file>${logDirectory}/crecer-api-rest.log</file>
+		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+			<fileNamePattern>${logDirectory}/crecer-api-rest_%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+			<timeBasedFileNamingAndTriggeringPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
+				<maxFileSize>30MB</maxFileSize>
+			</timeBasedFileNamingAndTriggeringPolicy>
+		</rollingPolicy>
+		<encoder>
+			<charset>${logEncoding}</charset>
+			<pattern>${logPattern}</pattern>
+		</encoder>
+	</appender>
+	
+	<logger name="org.springframework" level="INFO">
+		<appender-ref ref="CONSOLE" />
+		<appender-ref ref="fileAppender"/>
+	</logger>
+
+	<root level="ERROR">
+		<appender-ref ref="CONSOLE"/>
+		<appender-ref ref="fileAppender"/>	
+	</root>
+
+</configuration>

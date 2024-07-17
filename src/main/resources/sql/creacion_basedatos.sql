@@ -1,0 +1,4 @@
+CREATE USER "ccr" WITH ENCRYPTED PASSWORD 'ccr';
+ALTER ROLE "ccr" WITH createdb;
+CREATE database "ccr";
+ALTER DATABASE ccr OWNER TO ccr;

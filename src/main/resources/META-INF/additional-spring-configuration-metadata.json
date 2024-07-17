@@ -1,0 +1,42 @@
+{"properties": [
+  {
+    "name": "jwt.key.public",
+    "type": "java.lang.String",
+    "description": "A description for 'jwt.key.public'"
+  },
+  {
+    "name": "jwt.key.private",
+    "type": "java.lang.String",
+    "description": "A description for 'jwt.key.private'"
+  },
+  {
+    "name": "jwt.key.time.millis",
+    "type": "java.lang.String",
+    "description": "A description for 'jwt.key.time.millis'"
+  },
+  {
+    "name": "springdoc.api-docs.path",
+    "type": "java.lang.String",
+    "description": "A description for 'springdoc.api-docs.path'"
+  },
+  {
+    "name": "springdoc.paths-to-exclude",
+    "type": "java.lang.String",
+    "description": "A description for 'springdoc.paths-to-exclude'"
+  },
+  {
+    "name": "spring.webmvc.cors.max-age",
+    "type": "java.lang.String",
+    "description": "A description for 'spring.webmvc.cors.max-age'"
+  },
+  {
+    "name": "spring.webmvc.cors.allowed-origins",
+    "type": "java.lang.String",
+    "description": "A description for 'spring.webmvc.cors.allowed-origins'"
+  },
+  {
+    "name": "spring.webmvc.cors.allowed-methods",
+    "type": "java.lang.String",
+    "description": "A description for 'spring.webmvc.cors.allowed-methods'"
+  }
+]}
