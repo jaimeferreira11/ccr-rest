@@ -28,6 +28,7 @@ public class AutenticacionService {
         // if (this.verifyPassword(password, usuario.getPassword())) {
         // return usuario;
         // }
+        if(usuario == null) return null;
         if (password.equals(usuario.getPassword())) {
             return usuario;
         }
@@ -72,7 +73,7 @@ public class AutenticacionService {
 
     public void updateUser(Usuario user) {
 
-        em.persist(user);
+        usuarioRepository.save(user);
 
     }
 

@@ -51,7 +51,7 @@ public class Item implements Serializable {
     private String pregunta;
 
     @NotNull
-    @Column(name = "ACTIVO", nullable = false, columnDefinition = "NUMBER(1) DEFAULT 1 CHECK (ACTIVO IN (0,1))")
+    @Column(name = "ACTIVO", nullable = false, columnDefinition = "boolean NOT NULL default true")
     private Boolean activo;
 
     // Getters and Setters

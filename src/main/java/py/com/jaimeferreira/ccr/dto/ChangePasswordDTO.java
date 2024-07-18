@@ -1,24 +1,30 @@
 package py.com.jaimeferreira.ccr.dto;
 
+import javax.validation.constraints.Min;
+import javax.validation.constraints.NotNull;
+
 /**
- * @author Luis Fernando Capdevila Avalos
+ * @author jaime Ferreira
  *
  */
 
 public class ChangePasswordDTO {
-    
+
+    @NotNull
     private String usuario;
 
-    private String oldPaswword;
+    @NotNull
+    private String oldPassword;
 
+    @NotNull
     private String newPassword;
 
-    public String getOldPaswword() {
-        return oldPaswword;
+    public String getOldPassword() {
+        return oldPassword;
     }
 
-    public void setOldPaswword(String oldPaswword) {
-        this.oldPaswword = oldPaswword;
+    public void setOldPassword(String oldPassword) {
+        this.oldPassword = oldPassword;
     }
 
     public String getNewPassword() {
@@ -36,7 +42,5 @@ public class ChangePasswordDTO {
     public void setUsuario(String usuario) {
         this.usuario = usuario;
     }
-
-    
 
 }

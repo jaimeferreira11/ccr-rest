@@ -61,17 +61,19 @@ create table zoomin.respuesta_cab(
     fecha_sinc timestamp default now() not null,
     fecha_creacion character varying(100),
     hora_inicio character varying(20),
-    hora_fin character varying(20)
+    hora_fin character varying(20),
+    activo boolean default true not null,
 );
 
 create table zoomin.respuesta_det(
     id serial primary key,
-    id_resouesta_cab integer not null,
+    id_respuesta_cab integer not null,
     id_item integer not null,
     desc_item character varying(200) not null,
     cabecera character varying(200) not null,
     valor character varying(10) not null,
     comentario character varying(500),
-    precio integer,
+    precio character varying(100),
+    activo boolean default true not null,
     constraint fk_respuesta_det_cab foreign key (id_resouesta_cab) references zoomin.respuesta_cab(id)
 );

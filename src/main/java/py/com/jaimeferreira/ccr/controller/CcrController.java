@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import py.com.jaimeferreira.ccr.dto.ChangePasswordDTO;
+import py.com.jaimeferreira.ccr.dto.ImageUploadDTO;
 import py.com.jaimeferreira.ccr.entity.Boca;
 import py.com.jaimeferreira.ccr.entity.Cabecera;
 import py.com.jaimeferreira.ccr.entity.Item;
@@ -29,6 +30,7 @@ import py.com.jaimeferreira.ccr.service.BocasService;
 import py.com.jaimeferreira.ccr.service.CabecerasService;
 import py.com.jaimeferreira.ccr.service.ItemsService;
 import py.com.jaimeferreira.ccr.service.RespuestaCabService;
+import py.com.jaimeferreira.ccr.util.ManejadorDeArchivos;
 
 /**
  *
@@ -52,10 +54,12 @@ public class CcrController {
 
     @Autowired
     private RespuestaCabService respuestaCabService;
-    
-    
+
     @Autowired
     private AutenticacionService autenticacionService;
+
+    @Autowired
+    private ManejadorDeArchivos manejadorDeArchivos;
 
     @GetMapping(value = "/items", produces = "application/json")
     public ResponseEntity<List<Item>> items() {
@@ -97,43 +101,54 @@ public class CcrController {
         catch (Exception e) {
             e.printStackTrace();
             LOGGER.error(e.getMessage());
-             ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                                 .body("Error interno del servidor");
+            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                          .body("Error interno del servidor");
         }
         return null;
     }
-    
-    
+
     @PutMapping(value = "/usuarios/change-password", consumes = "application/json", produces = "application/json")
     @ResponseBody
     public ResponseEntity<String>
            saveRespuesta(@Valid @RequestBody ChangePasswordDTO changePass) {
         try {
-            
+
             Usuario usuario =
-                    autenticacionService.findByUsernameAndPassword(changePass.getUsuario(), changePass.getOldPaswword());
-            
+                autenticacionService.findByUsernameAndPassword(changePass.getUsuario(), changePass.getOldPassword());
+
             if (usuario == null) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body("No existe el usuario");
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
             }
-            
+
             usuario.setPassword(changePass.getNewPassword());
-            
+
             autenticacionService.updateUser(usuario);
-            
-           
+
             return ResponseEntity.status(HttpStatus.OK).build();
         }
-        // catch (CustomGeneralException e) {
-        // LOGGER.error(e.getMessage());
-        // return ResponseEntity.status(HttpStatus.CONFLICT)
-        // .body(e.getContenidoError());
-        // }
         catch (Exception e) {
             e.printStackTrace();
             LOGGER.error(e.getMessage());
-             ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                                 .body("Error interno del servidor");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+
+    }
+
+    @PostMapping(value = "/upload-image", consumes = "application/json", produces = "application/json")
+    @ResponseBody
+    public ResponseEntity<Void>
+           saveImage(@Valid @RequestBody ImageUploadDTO upload) {
+        try {
+            manejadorDeArchivos.base64ToImagen(upload.getPathImagen(),
+                                               upload.getImgBase64String(), upload.getFechaCreacion());
+            return ResponseEntity.status(HttpStatus.OK).build();
+        }
+
+        catch (Exception e) {
+            e.printStackTrace();
+            LOGGER.error(e.getMessage());
+            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                          .body("Error interno del servidor");
         }
         return null;
     }

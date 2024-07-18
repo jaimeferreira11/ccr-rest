@@ -67,8 +67,8 @@ public class RespuestaCab implements Serializable {
 
 //    @NotNull
     // @Temporal(TemporalType.TIMESTAMP)
-    @Column(name = "FECHA_SINC", nullable = false, columnDefinition = "DATE DEFAULT SYSDATE")
-    private Date fechaSinc;
+//    @Column(name = "FECHA_SINC", nullable = false, columnDefinition = "DATE DEFAULT SYSDATE")
+//    private Date fechaSinc;
 
     @Size(max = 100)
     @Column(name = "FECHA_CREACION", length = 100)
@@ -81,6 +81,9 @@ public class RespuestaCab implements Serializable {
     @Size(max = 20)
     @Column(name = "HORA_FIN", length = 20)
     private String horaFin;
+    
+    @Column(name = "ACTIVO", nullable = false, columnDefinition = "boolean NOT NULL default true")
+    private Boolean activo;
 
     @Transient
     private List<RespuestaDet> detalles;
@@ -90,7 +93,8 @@ public class RespuestaCab implements Serializable {
     
     @PrePersist
     protected void onCreate() {
-        this.fechaSinc = new Date(System.currentTimeMillis());
+//        this.fechaSinc = new Date(System.currentTimeMillis());
+        this.activo = true;
     }
 
     // Getters and Setters
@@ -159,13 +163,13 @@ public class RespuestaCab implements Serializable {
         this.pathImagen = pathImagen;
     }
 
-    public Date getFechaSinc() {
-        return fechaSinc;
-    }
-
-    public void setFechaSinc(Date fechaSinc) {
-        this.fechaSinc = fechaSinc;
-    }
+//    public Date getFechaSinc() {
+//        return fechaSinc;
+//    }
+//
+//    public void setFechaSinc(Date fechaSinc) {
+//        this.fechaSinc = fechaSinc;
+//    }
 
     public String getFechaCreacion() {
         return fechaCreacion;
@@ -205,6 +209,14 @@ public class RespuestaCab implements Serializable {
 
     public void setImgBase64String(String imgBase64String) {
         this.imgBase64String = imgBase64String;
+    }
+
+    public Boolean getActivo() {
+        return activo;
+    }
+
+    public void setActivo(Boolean activo) {
+        this.activo = activo;
     }
     
     

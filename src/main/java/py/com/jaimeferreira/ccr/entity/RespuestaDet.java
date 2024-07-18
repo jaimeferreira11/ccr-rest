@@ -8,6 +8,7 @@ import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.PrePersist;
 import javax.persistence.Table;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
@@ -28,7 +29,7 @@ public class RespuestaDet implements Serializable {
     private Long id;
 
     @NotNull
-    @Column(name = "ID_RESOUESTA_CAB", nullable = false)
+    @Column(name = "ID_RESPUESTA_CAB", nullable = false)
     private Long idRespuestaCab;
 
     @NotNull
@@ -54,12 +55,21 @@ public class RespuestaDet implements Serializable {
     @Column(name = "COMENTARIO", length = 500)
     private String comentario;
 
-    @Column(name = "PRECIO")
-    private Double precio;
+    @Size(max = 100)
+    @Column(name = "PRECIO", length = 100)
+    private String precio;
+
+    @Column(name = "ACTIVO", nullable = false, columnDefinition = "boolean NOT NULL default true")
+    private Boolean activo;
 
     // @ManyToOne(fetch = FetchType.LAZY)
     // @JoinColumn(name = "ID_RESOUESTA_CAB", insertable = false, updatable = false)
     // private Long respuestaCab;
+
+    @PrePersist
+    protected void onCreate() {
+        this.activo = true;
+    }
 
     // Getters and Setters
 
@@ -119,12 +129,20 @@ public class RespuestaDet implements Serializable {
         this.comentario = comentario;
     }
 
-    public Double getPrecio() {
+    public String getPrecio() {
         return precio;
     }
 
-    public void setPrecio(Double precio) {
+    public void setPrecio(String precio) {
         this.precio = precio;
+    }
+
+    public Boolean getActivo() {
+        return activo;
+    }
+
+    public void setActivo(Boolean activo) {
+        this.activo = activo;
     }
 
 }

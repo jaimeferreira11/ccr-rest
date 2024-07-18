@@ -95,6 +95,19 @@ public class ManejadorDeArchivos {
         // File(directorioServer.concat(directorioServerPathImages).concat(fileName));
         // }
         FileOutputStream outputStream = null;
+        
+        
+        
+        
+        File outputDir = outputFile.getParentFile();
+
+        // Crear el directorio si no existe
+        if (!outputDir.exists()) {
+            outputDir.mkdirs();
+        }
+        
+        
+        
         try {
             outputStream = new FileOutputStream(outputFile);
 
