@@ -54,6 +54,11 @@ public class Item implements Serializable {
     @Column(name = "ACTIVO", nullable = false, columnDefinition = "boolean NOT NULL default true")
     private Boolean activo;
 
+    @Size(max = 200)
+    @NotNull
+    @Column(name = "OCASION", nullable = false)
+    private String ocasion;
+
     // Getters and Setters
 
     public Long getId() {
@@ -110,6 +115,14 @@ public class Item implements Serializable {
 
     public void setLeyenda(String leyenda) {
         this.leyenda = leyenda;
+    }
+
+    public String getOcasion() {
+        return ocasion;
+    }
+
+    public void setOcasion(String ocasion) {
+        this.ocasion = ocasion;
     }
 
 }

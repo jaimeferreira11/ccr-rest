@@ -40,14 +40,19 @@ public class Boca {
     @Size(max = 200)
     @Column(name = "CIUDAD", nullable = false, length = 200)
     private String ciudad;
-    
+
     @Size(max = 200)
     @Column(name = "TIPO_BOCA", length = 200)
     private String tipoBoca;
-    
+
     @NotNull
     @Column(name = "ACTIVO", nullable = false, columnDefinition = "NUMBER(1) DEFAULT 1 CHECK (ACTIVO IN (0,1))")
     private Boolean activo;
+
+    @Size(max = 200)
+    @NotNull
+    @Column(name = "OCASION", nullable = false)
+    private String ocasion;
 
     // Getters and Setters
 
@@ -66,8 +71,6 @@ public class Boca {
     public void setCodBoca(String codBoca) {
         this.codBoca = codBoca;
     }
-
-    
 
     public String getNombre() {
         return nombre;
@@ -108,6 +111,13 @@ public class Boca {
     public void setActivo(Boolean activo) {
         this.activo = activo;
     }
-    
-    
+
+    public String getOcasion() {
+        return ocasion;
+    }
+
+    public void setOcasion(String ocasion) {
+        this.ocasion = ocasion;
+    }
+
 }

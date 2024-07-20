@@ -2,7 +2,6 @@
 package py.com.jaimeferreira.ccr.entity;
 
 import java.io.Serializable;
-import java.sql.Date;
 import java.util.List;
 
 import javax.persistence.Column;
@@ -60,15 +59,15 @@ public class RespuestaCab implements Serializable {
     @Column(name = "LATITUD", nullable = false, length = 500)
     private String latitud;
 
-    @NotNull
-    @Size(max = 300)
-    @Column(name = "PATH_IMAGEN", nullable = false, length = 300)
-    private String pathImagen;
+    // @NotNull
+    // @Size(max = 300)
+    // @Column(name = "PATH_IMAGEN", nullable = false, length = 300)
+    // private String pathImagen;
 
-//    @NotNull
+    // @NotNull
     // @Temporal(TemporalType.TIMESTAMP)
-//    @Column(name = "FECHA_SINC", nullable = false, columnDefinition = "DATE DEFAULT SYSDATE")
-//    private Date fechaSinc;
+    // @Column(name = "FECHA_SINC", nullable = false, columnDefinition = "DATE DEFAULT SYSDATE")
+    // private Date fechaSinc;
 
     @Size(max = 100)
     @Column(name = "FECHA_CREACION", length = 100)
@@ -81,19 +80,22 @@ public class RespuestaCab implements Serializable {
     @Size(max = 20)
     @Column(name = "HORA_FIN", length = 20)
     private String horaFin;
-    
+
     @Column(name = "ACTIVO", nullable = false, columnDefinition = "boolean NOT NULL default true")
     private Boolean activo;
 
     @Transient
     private List<RespuestaDet> detalles;
-    
+
     @Transient
-    private String imgBase64String;
-    
+    private List<RespuestaImagen> imagenes;
+
+    // @Transient
+    // private String imgBase64String;
+
     @PrePersist
     protected void onCreate() {
-//        this.fechaSinc = new Date(System.currentTimeMillis());
+        // this.fechaSinc = new Date(System.currentTimeMillis());
         this.activo = true;
     }
 
@@ -155,21 +157,21 @@ public class RespuestaCab implements Serializable {
         this.latitud = latitud;
     }
 
-    public String getPathImagen() {
-        return pathImagen;
-    }
-
-    public void setPathImagen(String pathImagen) {
-        this.pathImagen = pathImagen;
-    }
-
-//    public Date getFechaSinc() {
-//        return fechaSinc;
+//    public String getPathImagen() {
+//        return pathImagen;
 //    }
 //
-//    public void setFechaSinc(Date fechaSinc) {
-//        this.fechaSinc = fechaSinc;
+//    public void setPathImagen(String pathImagen) {
+//        this.pathImagen = pathImagen;
 //    }
+
+    // public Date getFechaSinc() {
+    // return fechaSinc;
+    // }
+    //
+    // public void setFechaSinc(Date fechaSinc) {
+    // this.fechaSinc = fechaSinc;
+    // }
 
     public String getFechaCreacion() {
         return fechaCreacion;
@@ -203,13 +205,13 @@ public class RespuestaCab implements Serializable {
         this.detalles = detalles;
     }
 
-    public String getImgBase64String() {
-        return imgBase64String;
-    }
-
-    public void setImgBase64String(String imgBase64String) {
-        this.imgBase64String = imgBase64String;
-    }
+    // public String getImgBase64String() {
+    // return imgBase64String;
+    // }
+    //
+    // public void setImgBase64String(String imgBase64String) {
+    // this.imgBase64String = imgBase64String;
+    // }
 
     public Boolean getActivo() {
         return activo;
@@ -218,7 +220,13 @@ public class RespuestaCab implements Serializable {
     public void setActivo(Boolean activo) {
         this.activo = activo;
     }
-    
-    
+
+    public List<RespuestaImagen> getImagenes() {
+        return imagenes;
+    }
+
+    public void setImagenes(List<RespuestaImagen> imagenes) {
+        this.imagenes = imagenes;
+    }
 
 }

@@ -15,6 +15,7 @@ create table zoomin.bocas (
     direccion character varying(200),
     ciudad character varying(200) not null,
     tipo_boca character varying(200),
+    ocasion character varying(200) not null,
     activo boolean default true not null 
 );
 
@@ -45,6 +46,7 @@ create table zoomin.items(
     leyenda character varying(300) not null,
     cod_cabecera character varying(100) not null,
     pregunta character varying(500),
+    ocasion character varying(200) not null,
     activo boolean default true not null,
     foreign key (cod_cabecera) references zoomin.cabeceras(codigo)
 );
@@ -75,5 +77,13 @@ create table zoomin.respuesta_det(
     comentario character varying(500),
     precio character varying(100),
     activo boolean default true not null,
-    constraint fk_respuesta_det_cab foreign key (id_resouesta_cab) references zoomin.respuesta_cab(id)
+    constraint fk_respuesta_det_cab foreign key (id_respuesta_cab) references zoomin.respuesta_cab(id)
+);
+
+create table zoomin.respuesta_imagen(
+    id serial primary key,
+    id_respuesta_cab integer not null,
+    path_imagen character varying(300) not null,
+    activo boolean default true not null,
+    constraint fk_respuesta_imagen_cab foreign key (id_respuesta_cab) references zoomin.respuesta_cab(id)
 );

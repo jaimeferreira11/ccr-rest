@@ -153,4 +153,27 @@ public class CcrController {
         return null;
     }
 
+    @PostMapping(value = "/upload-list-image", consumes = "application/json", produces = "application/json")
+    @ResponseBody
+    public ResponseEntity<Void>
+           saveListImage(@Valid @RequestBody List<ImageUploadDTO> list) {
+        try {
+
+            list.stream().forEach(upload -> {
+
+                manejadorDeArchivos.base64ToImagen(upload.getPathImagen(),
+                                                   upload.getImgBase64String(), upload.getFechaCreacion());
+            });
+            return ResponseEntity.status(HttpStatus.OK).build();
+        }
+
+        catch (Exception e) {
+            e.printStackTrace();
+            LOGGER.error(e.getMessage());
+            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                          .body("Error interno del servidor");
+        }
+        return null;
+    }
+
 }

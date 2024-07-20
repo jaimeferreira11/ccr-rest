@@ -16,6 +16,7 @@ import py.com.jaimeferreira.ccr.entity.RespuestaCab;
 import py.com.jaimeferreira.ccr.entity.RespuestaDet;
 import py.com.jaimeferreira.ccr.repository.RespuestaCabRepository;
 import py.com.jaimeferreira.ccr.repository.RespuestaDetRepository;
+import py.com.jaimeferreira.ccr.repository.RespuestaImagenRepository;
 import py.com.jaimeferreira.ccr.util.ManejadorDeArchivos;
 
 /**
@@ -36,6 +37,9 @@ public class RespuestaCabService {
 
     @Autowired
     RespuestaDetRepository detRepository;
+
+    @Autowired
+    RespuestaImagenRepository imagenRepository;
 
     @Autowired
     private ManejadorDeArchivos manejadorDeArchivos;
@@ -69,17 +73,29 @@ public class RespuestaCabService {
             RespuestaCab cab = repository.save(r);
             // em.flush();
 
-            //
-            if (r.getImgBase64String() != null) {
-                manejadorDeArchivos.base64ToImagen(r.getPathImagen(),
-                                                   r.getImgBase64String(), r.getFechaCreacion());
-            }
+            // imagen de portada --> quitar
+//            if (r.getImgBase64String() != null) {
+//                manejadorDeArchivos.base64ToImagen(r.getPathImagen(),
+//                                                   r.getImgBase64String(), r.getFechaCreacion());
+//            }
 
+            // detalles
             r.getDetalles().stream().forEach(d -> {
                 d.setIdRespuestaCab(cab.getId());
 
                 detRepository.save(d);
 
+            });
+
+            // imagenes
+            r.getImagenes().stream().forEach(i -> {
+                i.setIdRespuestaCab(cab.getId());
+                if (i.getImgBase64String() != null) {
+                    manejadorDeArchivos.base64ToImagen(i.getPathImagen(),
+                                                       i.getImgBase64String(), r.getFechaCreacion());
+                    
+                    imagenRepository.save(i);
+                }
             });
         });
     }
