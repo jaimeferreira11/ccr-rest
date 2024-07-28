@@ -14,6 +14,6 @@ import py.com.jaimeferreira.ccr.entity.Item;
 public interface ItemsRepository extends JpaRepository<Item, Long> {
     
     
-    List<Item> findByActivoTrue();
+    List<Item> findByActivoTrueOrderById();
 
 }

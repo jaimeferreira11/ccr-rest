@@ -48,6 +48,7 @@ create table zoomin.items(
     pregunta character varying(500),
     ocasion character varying(200) not null,
     activo boolean default true not null,
+    imagen character varying(300),
     foreign key (cod_cabecera) references zoomin.cabeceras(codigo)
 );
 
@@ -59,7 +60,7 @@ create table zoomin.respuesta_cab(
     usuario character varying(200) not null,
     longitud character varying(500) not null,
     latitud character varying(500) not null,
-    path_imagen character varying(300) not null,
+    --path_imagen character varying(300) not null,
     fecha_sinc timestamp default now() not null,
     fecha_creacion character varying(100),
     hora_inicio character varying(20),
@@ -87,3 +88,7 @@ create table zoomin.respuesta_imagen(
     activo boolean default true not null,
     constraint fk_respuesta_imagen_cab foreign key (id_respuesta_cab) references zoomin.respuesta_cab(id)
 );
+
+
+
+alter table zoomin.items add column imagen character varying(300);

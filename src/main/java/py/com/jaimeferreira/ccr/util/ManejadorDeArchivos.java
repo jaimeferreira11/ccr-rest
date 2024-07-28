@@ -50,8 +50,8 @@ public class ManejadorDeArchivos {
     }
 
     // imagen desde el path a base64
-    public String imagenToBase64(String imagePath) throws IOException {
-        File file = new File(imagePath);
+    public String imagenToBase64(String imagePath) throws Exception {
+        File file = new File(directorioServer.concat(directorioServerPathImages).concat(imagePath));
         FileInputStream fileInputStream = null;
         byte[] imageBytes = null;
         try {
@@ -59,11 +59,14 @@ public class ManejadorDeArchivos {
             imageBytes = new byte[(int) file.length()];
             fileInputStream.read(imageBytes);
             fileInputStream.close();
-        }
-        catch (Exception e) {
+            return Base64.getEncoder().encodeToString(imageBytes);
+        }catch (FileNotFoundException e) {
+            LOGGER.info("Imagen no encontrada: " + imagePath);
+            throw e;
+        }catch (Exception e) {
             e.printStackTrace();
+            throw e;
         }
-        return Base64.getEncoder().encodeToString(imageBytes);
     }
 
     // imagen desde el path a array de byte

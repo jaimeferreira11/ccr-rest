@@ -9,6 +9,7 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.Table;
+import javax.persistence.Transient;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
 
@@ -58,6 +59,14 @@ public class Item implements Serializable {
     @NotNull
     @Column(name = "OCASION", nullable = false)
     private String ocasion;
+
+    @NotNull
+    @Size(max = 300)
+    @Column(name = "IMAGEN", nullable = false, length = 300)
+    private String imagen;
+
+    @Transient
+    private String imgBase64String;
 
     // Getters and Setters
 
@@ -123,6 +132,22 @@ public class Item implements Serializable {
 
     public void setOcasion(String ocasion) {
         this.ocasion = ocasion;
+    }
+
+    public String getImagen() {
+        return imagen;
+    }
+
+    public void setImagen(String imagen) {
+        this.imagen = imagen;
+    }
+
+    public String getImgBase64String() {
+        return imgBase64String;
+    }
+
+    public void setImgBase64String(String imgBase64String) {
+        this.imgBase64String = imgBase64String;
     }
 
 }
