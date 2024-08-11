@@ -14,7 +14,7 @@ import py.com.jaimeferreira.ccr.entity.Usuario;
 @Repository
 public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
 
-    public Usuario findByUsuario(String usuario);
+    public Usuario findByUsuarioIgnoreCase(String usuario);
     
 
 

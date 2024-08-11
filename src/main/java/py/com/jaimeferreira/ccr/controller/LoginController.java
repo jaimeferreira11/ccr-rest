@@ -43,17 +43,18 @@ public class LoginController {
     @Autowired
     private FechaUtil fechaUtil;
 
-    @PostMapping(path="/login",  consumes = "application/json", produces = "application/json")
+    @PostMapping(path = "/login", consumes = "application/json", produces = "application/json")
     public ResponseEntity<?> loginAccess(@RequestBody AccesoDTO accesoDTO) {
         try {
             Usuario usuario =
-                autenticacionService.findByUsernameAndPassword(accesoDTO.getUsuario(), accesoDTO.getContrasena());
+                autenticacionService.findByUsernameAndPassword(accesoDTO.getUsuario().trim(),
+                                                               accesoDTO.getContrasena().trim());
 
             if (usuario == null) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body("No existe el usuario");
             }
 
-            String token = this.jwtAuthorizationUtils.getJWTToken(usuario.getUsuario());
+            String token = this.jwtAuthorizationUtils.getJWTToken(usuario.getUsuario().trim());
             Claims claims = jwtAuthorizationFilter.validateTokenString(token);
             // autenticacionService.setSessionDeUsuario(usuario, token, claims.getExpiration());
 

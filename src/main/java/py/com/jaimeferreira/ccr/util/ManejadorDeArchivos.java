@@ -60,10 +60,12 @@ public class ManejadorDeArchivos {
             fileInputStream.read(imageBytes);
             fileInputStream.close();
             return Base64.getEncoder().encodeToString(imageBytes);
-        }catch (FileNotFoundException e) {
+        }
+        catch (FileNotFoundException e) {
             LOGGER.info("Imagen no encontrada: " + imagePath);
             throw e;
-        }catch (Exception e) {
+        }
+        catch (Exception e) {
             e.printStackTrace();
             throw e;
         }
@@ -90,18 +92,8 @@ public class ManejadorDeArchivos {
         byte[] imageBytes = Base64.getDecoder().decode(base64Img);
         File outputFile = new File(directorioServer.concat(directorioServerPathImages).concat(fileName));
 
-        // if (pathImg.contains("/")) {
-        // outputFile = new File(pathImg);
-        // }
-        // else {
-        // outputFile = new
-        // File(directorioServer.concat(directorioServerPathImages).concat(fileName));
-        // }
         FileOutputStream outputStream = null;
-        
-        
-        
-        
+
         File outputDir = outputFile.getParentFile();
 
         // Crear el directorio si no existe
@@ -109,25 +101,45 @@ public class ManejadorDeArchivos {
             outputDir.mkdirs();
         }
         
-        
-        
+        // Renombrar si el archivo ya existe
+        outputFile = renameIfExists(outputFile);
+
         try {
             outputStream = new FileOutputStream(outputFile);
 
+            try {
+                outputStream.write(imageBytes);
+                outputStream.close();
+
+                ManejadorDeArchivos.addTextWatermark(watermarkText, outputFile, outputFile);
+            }
+            catch (IOException e) {
+                e.printStackTrace();
+            }
         }
         catch (FileNotFoundException e) {
             e.printStackTrace();
         }
-        try {
-            outputStream.write(imageBytes);
-            outputStream.close();
 
-            ManejadorDeArchivos.addTextWatermark(watermarkText, outputFile,outputFile);
-        }
-        catch (IOException e) {
-            e.printStackTrace();
+    }
+    
+    private File renameIfExists(File file) {
+        int count = 0;
+        String filePath = file.getAbsolutePath();
+        String fileName = file.getName();
+        String fileExtension = "";
+
+        int dotIndex = fileName.lastIndexOf(".");
+        if (dotIndex > 0) {
+            fileExtension = fileName.substring(dotIndex);
+            fileName = fileName.substring(0, dotIndex);
         }
 
+        while (file.exists()) {
+            count++;
+            file = new File(filePath.replace(file.getName(), fileName + "(" + count +")" + fileExtension));
+        }
+        return file;
     }
 
     public String removerStringPath(String path) {

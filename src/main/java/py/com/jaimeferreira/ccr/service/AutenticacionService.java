@@ -23,7 +23,7 @@ public class AutenticacionService {
     // private SessionDeUsuarioRepository sessionDeUsuarioRepository;
 
     public Usuario findByUsernameAndPassword(String username, String password) {
-        Usuario usuario = usuarioRepository.findByUsuario(username);
+        Usuario usuario = usuarioRepository.findByUsuarioIgnoreCase(username);
         // No se va usar encriptacion
         // if (this.verifyPassword(password, usuario.getPassword())) {
         // return usuario;
@@ -36,7 +36,7 @@ public class AutenticacionService {
     }
 
     public Usuario findByUsuario(String username) {
-        Usuario usuario = usuarioRepository.findByUsuario(username);
+        Usuario usuario = usuarioRepository.findByUsuarioIgnoreCase(username);
         return usuario;
     }
 
