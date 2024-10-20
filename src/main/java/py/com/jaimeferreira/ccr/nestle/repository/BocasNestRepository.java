@@ -1,0 +1,20 @@
+
+package py.com.jaimeferreira.ccr.nestle.repository;
+
+import java.util.List;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import py.com.jaimeferreira.ccr.nestle.entity.BocaNest;
+
+/**
+ *
+ * @author Jaime Ferreira
+ */
+public interface BocasNestRepository extends JpaRepository<BocaNest, Long> {
+
+    List<BocaNest> findByActivoTrue();
+    
+    List<BocaNest> findByMesUltimaMedicionAndActivoTrue(String mes);
+
+}

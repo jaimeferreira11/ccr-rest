@@ -12,7 +12,7 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
-import py.com.jaimeferreira.ccr.service.AutenticacionService;
+import py.com.jaimeferreira.ccr.commons.service.AutenticacionService;
 
 /**
  *
