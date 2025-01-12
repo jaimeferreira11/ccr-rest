@@ -32,7 +32,13 @@ public class ManejadorDeArchivos {
 
     @Value("${path.directory.server_path_images}")
     private String directorioServerPathImages;
+
+    @Value("${path.directory.main_imagenes}")
+    private String directoryMainImages;
     
+     
+    @Value("${path.directory.server_path_images_scj}")
+    private String jhonsonFolder;
 
     public ManejadorDeArchivos() {
         super();
@@ -53,10 +59,21 @@ public class ManejadorDeArchivos {
     public void setDirectorioServerPathImages(String directorioServerPathImages) {
         this.directorioServerPathImages = directorioServerPathImages;
     }
+    
+    public String getDirectoryPathMainImagenes() {
+        
+        return directoryMainImages;
+    }
+    
+    public String getDirectoryPathImagenesJhonson() {
+     
+        return directoryMainImages.concat(jhonsonFolder);
+    }
 
     // imagen desde el path a base64
     public String imagenToBase64(String imagePath) throws Exception {
         File file = new File(directorioServer.concat(directorioServerPathImages).concat(imagePath));
+        LOGGER.info(file.getAbsolutePath());
         FileInputStream fileInputStream = null;
         byte[] imageBytes = null;
         try {
@@ -93,7 +110,28 @@ public class ManejadorDeArchivos {
         return imageBytes;
     }
 
-    public void base64ToImagen(String fileName, String base64Img, String watermarkText) {
+    public byte[] getImageFromApp(String path) {
+        byte[] arr = null;
+        try {
+            File file = null;
+            String sFile = directoryMainImages.concat(path);
+            FileInputStream fileStream = new FileInputStream(file = new File(sFile));
+            arr = new byte[(int) file.length()];
+            fileStream.read(arr, 0, arr.length);
+
+        }
+        catch (FileNotFoundException e) {
+            System.out.println("No se encontro la imagen: " + directoryMainImages  + path);
+
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return arr;
+    }
+
+    public void base64ToImagen(String fileName, String base64Img, String watermarkText, boolean onlyVertical) {
         byte[] imageBytes = Base64.getDecoder().decode(base64Img);
         File outputFile = new File(directorioServer.concat(directorioServerPathImages).concat(fileName));
 
@@ -105,30 +143,34 @@ public class ManejadorDeArchivos {
         if (!outputDir.exists()) {
             outputDir.mkdirs();
         }
-        
+
         // Renombrar si el archivo ya existe
         outputFile = renameIfExists(outputFile);
 
         try {
-         // Convertir los bytes a un BufferedImage
+            // Convertir los bytes a un BufferedImage
             InputStream inputStream = new ByteArrayInputStream(imageBytes);
             BufferedImage image = ImageIO.read(inputStream);
-            
+
             if (image == null) {
                 throw new FileNotFoundException("Error al leer la imagen.");
             }
 
-            // Verificar si la imagen necesita ser rotada
-            if (image.getWidth() > image.getHeight()) {
-                LOGGER.info("Rotar la imagen para que esté en orientación vertical: " + fileName );
-                image = rotateImage(image, 90);
+            if (onlyVertical) {
+                // Verificar si la imagen necesita ser rotada
+                if (image.getWidth() > image.getHeight()) {
+                    LOGGER.info("Rotar la imagen para que esté en orientación vertical: " + fileName);
+                    image = rotateImage(image, 90);
+                }
             }
 
             // Guardar la imagen en el archivo
-            ImageIO.write(image, "jpg", outputFile);  // Asumiendo que es JPG, cambia según tu formato
+            ImageIO.write(image, "jpg", outputFile);  // Asumiendo que es JPG, cambia según tu
+                                                      // formato
 
             // Añadir la marca de agua
-            ManejadorDeArchivos.addTextWatermark(watermarkText, outputFile, outputFile);
+            if (watermarkText != null)
+                ManejadorDeArchivos.addTextWatermark(watermarkText, outputFile, outputFile);
 
         }
         catch (Exception e) {
@@ -136,16 +178,16 @@ public class ManejadorDeArchivos {
         }
 
     }
-    
+
     private BufferedImage rotateImage(BufferedImage originalImage, int angle) {
         int width = originalImage.getWidth();
         int height = originalImage.getHeight();
-        
+
         // Crear una nueva imagen con las dimensiones invertidas
         BufferedImage rotatedImage = new BufferedImage(height, width, originalImage.getType());
-        
+
         Graphics2D g2d = rotatedImage.createGraphics();
-        
+
         // Rotar la imagen
         AffineTransform at = new AffineTransform();
         at.translate(height / 2.0, width / 2.0);  // Mover al centro
@@ -153,10 +195,10 @@ public class ManejadorDeArchivos {
         at.translate(-width / 2.0, -height / 2.0); // Mover al origen
         g2d.drawImage(originalImage, at, null);
         g2d.dispose();
-        
+
         return rotatedImage;
     }
-    
+
     private File renameIfExists(File file) {
         int count = 0;
         String filePath = file.getAbsolutePath();
@@ -171,7 +213,7 @@ public class ManejadorDeArchivos {
 
         while (file.exists()) {
             count++;
-            file = new File(filePath.replace(file.getName(), fileName + "(" + count +")" + fileExtension));
+            file = new File(filePath.replace(file.getName(), fileName + "(" + count + ")" + fileExtension));
         }
         return file;
     }

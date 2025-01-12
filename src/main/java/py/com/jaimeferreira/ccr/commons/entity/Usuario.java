@@ -36,6 +36,10 @@ public class Usuario {
     @NotNull
     @Column(name = "ACTIVO", nullable = false, columnDefinition = "NUMBER(1) DEFAULT 1 CHECK (ACTIVO IN (0,1))")
     private Boolean activo;
+    
+    
+    @Column(name = "COD_CLIENTE")
+    private String codCliente;
 
     // Getters and Setters
 
@@ -78,4 +82,14 @@ public class Usuario {
     public void setActivo(Boolean activo) {
         this.activo = activo;
     }
+
+    public String getCodCliente() {
+        return codCliente;
+    }
+
+    public void setCodCliente(String codCliente) {
+        this.codCliente = codCliente;
+    }
+    
+    
 }

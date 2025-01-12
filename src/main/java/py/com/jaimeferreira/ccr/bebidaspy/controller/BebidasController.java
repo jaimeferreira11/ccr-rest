@@ -140,7 +140,7 @@ public class BebidasController {
            saveImage(@Valid @RequestBody ImageUploadDTO upload) {
         try {
             manejadorDeArchivos.base64ToImagen(upload.getPathImagen(),
-                                               upload.getImgBase64String(), upload.getFechaCreacion());
+                                               upload.getImgBase64String(), upload.getFechaCreacion(), true);
             return ResponseEntity.status(HttpStatus.OK).build();
         }
 
@@ -162,7 +162,7 @@ public class BebidasController {
             list.stream().forEach(upload -> {
 
                 manejadorDeArchivos.base64ToImagen(upload.getPathImagen(),
-                                                   upload.getImgBase64String(), upload.getFechaCreacion());
+                                                   upload.getImgBase64String(), upload.getFechaCreacion(), true);
             });
             return ResponseEntity.status(HttpStatus.OK).build();
         }

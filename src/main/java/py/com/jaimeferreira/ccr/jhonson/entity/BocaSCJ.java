@@ -1,5 +1,5 @@
 
-package py.com.jaimeferreira.ccr.nestle.entity;
+package py.com.jaimeferreira.ccr.jhonson.entity;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -7,67 +7,52 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.Table;
-import javax.validation.constraints.NotNull;
-import javax.validation.constraints.Size;
 
 /**
  *
  * @author Jaime Ferreira
  */
+
 @Entity
-@Table(name = "bocas", schema = "nestle")
-public class BocaNest {
+@Table(name = "bocas", schema = "jhonson")
+public class BocaSCJ {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "ID")
     private Long id;
 
-    @NotNull
-    @Column(name = "COD_BOCA", nullable = false)
+    @Column(name = "cod_boca", length = 50, nullable = false)
     private String codBoca;
 
-    @NotNull
-    @Size(max = 200)
-    @Column(name = "NOMBRE", nullable = false, length = 200)
+    @Column(name = "nombre", length = 200, nullable = false)
     private String nombre;
 
-    @Size(max = 200)
-    @Column(name = "DIRECCION", length = 200)
+    @Column(name = "direccion", length = 200)
     private String direccion;
 
-    @NotNull
-    @Size(max = 200)
-    @Column(name = "CIUDAD", nullable = false, length = 200)
+    @Column(name = "ciudad", length = 200, nullable = false)
     private String ciudad;
 
-    @Size(max = 200)
-    @NotNull
-    @Column(name = "CANAL_CCR", length = 200, nullable = false)
+    @Column(name = "canal_ccr", length = 200)
     private String canalCcr;
 
-    @NotNull
-    @Column(name = "ACTIVO", nullable = false, columnDefinition = "boolean default true")
-    private Boolean activo;
-
-    @Size(max = 200)
-    @Column(name = "OCASION")
+    @Column(name = "ocasion", length = 200)
     private String ocasion;
 
-    @Column(name = "mes_ultima_medicion")
-    private String mesUltimaMedicion;
-    
-    
-    @Size(max = 500)
-    @Column(name = "LONGITUD", length = 500)
+    @Column(name = "ACTIVO", nullable = false, columnDefinition = "boolean default true")
+    private boolean activo = true;
+
+    @Column(name = "longitud", length = 500)
     private String longitud;
 
-    
-    @Size(max = 500)
-    @Column(name = "LATITUD", length = 500)
+    @Column(name = "latitud", length = 500)
     private String latitud;
 
-    // Getters and Setters
+    @Column(name = "externo", nullable = false)
+    private boolean externo = false;
+
+    @Column(name = "cod_distribuidor", nullable = false)
+    private String codDistribuidor;
 
     public Long getId() {
         return id;
@@ -93,22 +78,6 @@ public class BocaNest {
         this.nombre = nombre;
     }
 
-    public String getCanalCcr() {
-        return canalCcr;
-    }
-
-    public void setCanalCcr(String canalCcr) {
-        this.canalCcr = canalCcr;
-    }
-
-    public String getMesUltimaMedicion() {
-        return mesUltimaMedicion;
-    }
-
-    public void setMesUltimaMedicion(String mesUltimaMedicion) {
-        this.mesUltimaMedicion = mesUltimaMedicion;
-    }
-
     public String getDireccion() {
         return direccion;
     }
@@ -125,12 +94,12 @@ public class BocaNest {
         this.ciudad = ciudad;
     }
 
-    public Boolean getActivo() {
-        return activo;
+    public String getCanalCcr() {
+        return canalCcr;
     }
 
-    public void setActivo(Boolean activo) {
-        this.activo = activo;
+    public void setCanalCcr(String canalCcr) {
+        this.canalCcr = canalCcr;
     }
 
     public String getOcasion() {
@@ -139,6 +108,14 @@ public class BocaNest {
 
     public void setOcasion(String ocasion) {
         this.ocasion = ocasion;
+    }
+
+    public boolean isActivo() {
+        return activo;
+    }
+
+    public void setActivo(boolean activo) {
+        this.activo = activo;
     }
 
     public String getLongitud() {
@@ -156,7 +133,21 @@ public class BocaNest {
     public void setLatitud(String latitud) {
         this.latitud = latitud;
     }
-    
-    
+
+    public boolean isExterno() {
+        return externo;
+    }
+
+    public void setExterno(boolean externo) {
+        this.externo = externo;
+    }
+
+    public String getCodDistribuidor() {
+        return codDistribuidor;
+    }
+
+    public void setCodDistribuidor(String codDistribuidor) {
+        this.codDistribuidor = codDistribuidor;
+    }
 
 }

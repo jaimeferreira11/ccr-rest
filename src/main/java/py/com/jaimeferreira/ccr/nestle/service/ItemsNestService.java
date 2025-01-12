@@ -35,7 +35,7 @@ public class ItemsNestService {
 
             if (i.getImagen() != null && !i.getImagen().isEmpty()) {
                 try {
-                    i.setImgBase64String(manejadorDeArchivos.imagenToBase64("nestle/items/".concat(i.getImagen())));
+                    i.setImgBase64String(manejadorDeArchivos.imagenToBase64("zoomin-nestle/items/".concat(i.getImagen())));
                 }
                 catch (FileNotFoundException e) {
                     // Nothing

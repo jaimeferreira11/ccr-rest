@@ -1,5 +1,7 @@
 package py.com.jaimeferreira.ccr.commons.service;
 
+import java.util.Optional;
+
 import javax.persistence.EntityManager;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,6 +30,17 @@ public class AutenticacionService {
         // return usuario;
         // }
         if(usuario == null) return null;
+        if (password.equals(usuario.getPassword())) {
+            return usuario;
+        }
+        return null;
+    }
+    
+    public Usuario findByUsernameAndPasswordAndCliente(String username, String password, String codCliente) {
+        Optional<Usuario> optional = usuarioRepository.findByUsuarioIgnoreCaseAndCodClienteIgnoreCaseAndActivoTrue(username, codCliente);
+        if(!optional.isPresent()) return null;
+        
+        Usuario usuario = optional.get();
         if (password.equals(usuario.getPassword())) {
             return usuario;
         }

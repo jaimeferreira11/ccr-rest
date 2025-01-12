@@ -60,6 +60,7 @@ alter table nestle.cabeceras add constraint uk_codigo_cabecera unique(codigo);
 
 create table nestle.items(
     id serial primary key,
+    codigo int,
     descripcion character varying(200) not null,
     leyenda character varying(300),
     cod_cabecera character varying(100) not null,
@@ -75,9 +76,7 @@ create table nestle.items(
     foreign key (cod_cabecera) references nestle.cabeceras(codigo)
 );
 
-ALTER TABLE nestle.items ADD CONSTRAINT chk_item_canal CHECK (canal_ccr IN (
-    'AUTOSERVICIO', 'DESPENSA', 'ESTACION DE SERVICIO', 'SUPERMERCADO'
-));
+
 
 
 
@@ -136,7 +135,19 @@ create table nestle.respuesta_det(
 
 
 
-alter table zoomin.items add column imagen character varying(300);
+create table nestle.distribuidores(
+    id serial primary key,
+    descripcion character varying(300) not null,
+    codigo character varying(100) not null,
+    activo boolean default true not null 
+);
+
+alter table nestle.distribuidores add constraint uk_code_distribuidor unique(codigo);
+
+alter table nestle.bocas add column cod_distribuidor character varying(100);
+
+alter table nestle.bocas add foreign key (cod_distribuidor) references nestle.distribuidores(codigo);
+
 
 
 -- Ejecutar los privilegios al final

@@ -27,6 +27,10 @@ public class BocasNestService {
     @Autowired
     BocasNestRepository repository;
 
+    public BocaNest findById(Long id) {
+        return repository.findById(id).orElse(null);
+    }
+
     public List<BocaNest> list() {
         return repository.findByActivoTrue();
     }
@@ -38,6 +42,10 @@ public class BocasNestService {
         LOGGER.info("El mes de las bocas es: " + mesActual);
 
         return repository.findByMesUltimaMedicionAndActivoTrue(mesActual);
+    }
+
+    public void save(BocaNest boca) {
+        repository.save(boca);
     }
 
 }

@@ -92,7 +92,7 @@ public class RespuestaCabService {
                 i.setIdRespuestaCab(cab.getId());
                 if (i.getImgBase64String() != null) {
                     manejadorDeArchivos.base64ToImagen(i.getPathImagen(),
-                                                       i.getImgBase64String(), r.getFechaCreacion());
+                                                       i.getImgBase64String(), r.getFechaCreacion(), true);
                     
                     imagenRepository.save(i);
                 }

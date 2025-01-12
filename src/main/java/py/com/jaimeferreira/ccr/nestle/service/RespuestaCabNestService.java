@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import py.com.jaimeferreira.ccr.commons.util.ManejadorDeArchivos;
+import py.com.jaimeferreira.ccr.nestle.entity.BocaNest;
 import py.com.jaimeferreira.ccr.nestle.entity.RespuestaCabNest;
 import py.com.jaimeferreira.ccr.nestle.entity.RespuestaDetNest;
 import py.com.jaimeferreira.ccr.nestle.repository.RespuestaCabNestRepository;
@@ -43,6 +44,9 @@ public class RespuestaCabNestService {
 
     @Autowired
     private ManejadorDeArchivos manejadorDeArchivos;
+
+    @Autowired
+    private BocasNestService bocasService;
 
     public void saveRespuestas(List<RespuestaCabNest> respuestas) {
 
@@ -79,6 +83,28 @@ public class RespuestaCabNestService {
 
                 detRepository.save(d);
 
+                // si es autoservice marcado como despensa
+                
+                if (cab.getCanalCcr().equalsIgnoreCase("AUTOSERVICIO")
+                    && d.getCodCabecera().equalsIgnoreCase("FP") // Plaza
+                    && d.getSinDatos()) {
+
+                    Runnable task = () -> {
+                        try {
+                            BocaNest boca = bocasService.findById(cab.getIdBoca());
+                            if (boca != null) {
+                                boca.setCanalCcr("DESPENSA");
+                                bocasService.save(boca);
+                            }
+                        }
+                        catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    };
+                    Thread t = new Thread(task);
+                    t.start();
+                }
+
             });
             LOGGER.info("La cantidad de imagenes es " + r.getImagenes().size());
 
@@ -87,7 +113,7 @@ public class RespuestaCabNestService {
                 i.setIdRespuestaCab(cab.getId());
                 if (i.getImgBase64String() != null) {
                     manejadorDeArchivos.base64ToImagen(i.getPathImagen(),
-                                                       i.getImgBase64String(), r.getFechaCreacion());
+                                                       i.getImgBase64String(), r.getFechaCreacion(), false);
 
                     imagenRepository.save(i);
                 }

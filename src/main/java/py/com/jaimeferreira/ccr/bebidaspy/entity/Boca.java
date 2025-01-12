@@ -46,7 +46,7 @@ public class Boca {
     private String tipoBoca;
 
     @NotNull
-    @Column(name = "ACTIVO", nullable = false, columnDefinition = "NUMBER(1) DEFAULT 1 CHECK (ACTIVO IN (0,1))")
+    @Column(name = "ACTIVO", nullable = false, columnDefinition = "boolean default true")
     private Boolean activo;
 
     @Size(max = 200)
