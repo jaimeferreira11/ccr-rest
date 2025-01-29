@@ -1,5 +1,5 @@
 
-package py.com.jaimeferreira.ccr.jhonson.service;
+package py.com.jaimeferreira.ccr.nestle.service;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -31,10 +31,11 @@ import net.sf.jasperreports.export.SimplePptxReportConfiguration;
 import py.com.jaimeferreira.ccr.commons.exception.UnknownResourceException;
 import py.com.jaimeferreira.ccr.commons.util.ArchivosUtils;
 import py.com.jaimeferreira.ccr.commons.util.ManejadorDeArchivos;
-import py.com.jaimeferreira.ccr.jhonson.constants.ConstantsSCJ;
-import py.com.jaimeferreira.ccr.jhonson.entity.ReporteSCJ;
-import py.com.jaimeferreira.ccr.jhonson.repository.DistribuidoresSCJRepository;
-import py.com.jaimeferreira.ccr.jhonson.repository.ReportesSCJRepository;
+import py.com.jaimeferreira.ccr.nestle.constants.ConstantsNest;
+import py.com.jaimeferreira.ccr.nestle.entity.ReporteNest;
+import py.com.jaimeferreira.ccr.nestle.repository.DistribuidoresNestRepository;
+import py.com.jaimeferreira.ccr.nestle.repository.ReportesNestRepository;
+
 
 /**
  *
@@ -43,18 +44,18 @@ import py.com.jaimeferreira.ccr.jhonson.repository.ReportesSCJRepository;
 
 @Component
 @Service
-public class ReportesSCJService {
+public class ReportesNestService {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(ReportesSCJService.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(ReportesNestService.class);
 
     @Autowired
     JdbcTemplate jdbcTemplate;
 
     @Autowired
-    private ReportesSCJRepository repo;
+    private ReportesNestRepository repo;
 
     @Autowired
-    private DistribuidoresSCJRepository distribuidorRepo;
+    private DistribuidoresNestRepository distribuidorRepo;
 
     @Autowired
     private ManejadorDeArchivos manejadorDeArchivos;
@@ -62,7 +63,7 @@ public class ReportesSCJService {
     @Value("${env.active}")
     private String envProfile;
 
-    public Integer save(ReporteSCJ reporte) throws Exception {
+    public Integer save(ReporteNest reporte) throws Exception {
 
         if (!distribuidorRepo.findByCodigo(reporte.getCodDistribuidor()).isPresent()) {
             throw new UnknownResourceException("No se encuentra el distribuidor");
@@ -83,7 +84,7 @@ public class ReportesSCJService {
 
                                          if ("prod".equalsIgnoreCase(envProfile)) {
 
-                                             return ConstantsSCJ.URL_PROD_IMAGES.concat(d.getCodBoca()).concat("/")
+                                             return ConstantsNest.URL_PROD_IMAGES.concat(d.getCodBoca()).concat("/")
                                                                                 .concat(img);
                                          }
 
@@ -100,13 +101,13 @@ public class ReportesSCJService {
             d.setPathImagenes(imgs);
         });
 
-        ReporteSCJ newReport = repo.save(reporte);
+        ReporteNest newReport = repo.save(reporte);
 
         return newReport.getId().intValue();
 
     }
 
-    public List<ReporteSCJ> getLastByUser(String usuario, Integer limit) {
+    public List<ReporteNest> getLastByUser(String usuario, Integer limit) {
 
         return repo.findByUsuarioOrderByFechaCreacionDesc(usuario).stream()
                    .limit(limit)
@@ -122,7 +123,7 @@ public class ReportesSCJService {
 
         // Load and compile the Jasper report
         InputStream input =
-            ArchivosUtils.leerArchivoResourcesFolder(ReportesSCJService.class, resourcePath, resourceName);
+            ArchivosUtils.leerArchivoResourcesFolder(ReportesNestService.class, resourcePath, resourceName);
 
         this.LOGGER.info("Generando reporte id: " + idReporte + " profile = " + envProfile);
 

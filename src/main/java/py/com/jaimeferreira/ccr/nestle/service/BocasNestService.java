@@ -5,14 +5,18 @@ import java.time.LocalDate;
 import java.time.format.TextStyle;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import py.com.jaimeferreira.ccr.commons.exception.UnknownResourceException;
 import py.com.jaimeferreira.ccr.nestle.entity.BocaNest;
+import py.com.jaimeferreira.ccr.nestle.entity.DistribuidorNest;
 import py.com.jaimeferreira.ccr.nestle.repository.BocasNestRepository;
+import py.com.jaimeferreira.ccr.nestle.repository.DistribuidoresNestRepository;
 
 /**
  *
@@ -26,6 +30,9 @@ public class BocasNestService {
 
     @Autowired
     BocasNestRepository repository;
+    
+    @Autowired
+    private DistribuidoresNestRepository distribuidorRepo;
 
     public BocaNest findById(Long id) {
         return repository.findById(id).orElse(null);
@@ -33,6 +40,19 @@ public class BocasNestService {
 
     public List<BocaNest> list() {
         return repository.findByActivoTrue();
+    }
+    
+    public List<BocaNest> findByDistribuidor(String codDistribuidor) {
+
+        LOGGER.info("Buscando bocas del distribuidor: " + codDistribuidor);
+
+        Optional<DistribuidorNest> optionalDis = distribuidorRepo.findByCodigo(codDistribuidor.trim());
+
+        if (!optionalDis.isPresent()) {
+            throw new UnknownResourceException("Distrbuidor con codigo " + codDistribuidor + " no encontrado.");
+        }
+
+        return repository.findByCodDistribuidorAndActivoTrue(codDistribuidor.trim());
     }
 
     public List<BocaNest> listMesActual() {

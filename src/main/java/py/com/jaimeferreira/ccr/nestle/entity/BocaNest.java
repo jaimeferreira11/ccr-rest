@@ -56,16 +56,17 @@ public class BocaNest {
 
     @Column(name = "mes_ultima_medicion")
     private String mesUltimaMedicion;
-    
-    
+
     @Size(max = 500)
     @Column(name = "LONGITUD", length = 500)
     private String longitud;
 
-    
     @Size(max = 500)
     @Column(name = "LATITUD", length = 500)
     private String latitud;
+
+    @Column(name = "cod_distribuidor", nullable = true)
+    private String codDistribuidor;
 
     // Getters and Setters
 
@@ -156,7 +157,5 @@ public class BocaNest {
     public void setLatitud(String latitud) {
         this.latitud = latitud;
     }
-    
-    
 
 }

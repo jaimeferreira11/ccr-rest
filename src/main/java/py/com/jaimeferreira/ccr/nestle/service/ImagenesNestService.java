@@ -1,5 +1,5 @@
 
-package py.com.jaimeferreira.ccr.jhonson.service;
+package py.com.jaimeferreira.ccr.nestle.service;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -27,12 +27,13 @@ import org.springframework.stereotype.Service;
 
 import py.com.jaimeferreira.ccr.commons.exception.UnknownResourceException;
 import py.com.jaimeferreira.ccr.commons.util.ManejadorDeArchivos;
-import py.com.jaimeferreira.ccr.jhonson.constants.ConstantsSCJ;
-import py.com.jaimeferreira.ccr.jhonson.dto.ImagenBocaMesDTO;
-import py.com.jaimeferreira.ccr.jhonson.entity.BocaSCJ;
-import py.com.jaimeferreira.ccr.jhonson.repository.BocasSCJRepository;
-import py.com.jaimeferreira.ccr.jhonson.repository.DistribuidoresSCJRepository;
-import py.com.jaimeferreira.ccr.jhonson.service.filter.ImagenesFilter;
+import py.com.jaimeferreira.ccr.nestle.constants.ConstantsNest;
+import py.com.jaimeferreira.ccr.nestle.dto.ImagenBocaMesDTO;
+import py.com.jaimeferreira.ccr.nestle.entity.BocaNest;
+import py.com.jaimeferreira.ccr.nestle.repository.BocasNestRepository;
+import py.com.jaimeferreira.ccr.nestle.repository.DistribuidoresNestRepository;
+import py.com.jaimeferreira.ccr.nestle.service.filter.ImagenesFilter;
+
 
 /**
  *
@@ -41,24 +42,27 @@ import py.com.jaimeferreira.ccr.jhonson.service.filter.ImagenesFilter;
 
 @Component
 @Service
-public class ImagenesSCJService {
+public class ImagenesNestService {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(ImagenesSCJService.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(ImagenesNestService.class);
 
     @Value("${path.directory.main_imagenes}")
     private String directorioServer;
 
-    @Value("${path.directory.server_path_images_scj}")
+    @Value("${path.directory.server_path_images_nestle}")
     private String mainPathImages;
 
-    @Value("${path.directory.server_path_images_externo_scj}")
+    @Value("${path.directory.server_path_images_externo_nestle}")
     private String mainPathImagesExterno;
+    
+    
+    
 
     @Autowired
-    private BocasSCJRepository bocasRepository;
+    private BocasNestRepository bocasRepository;
 
     @Autowired
-    private DistribuidoresSCJRepository distribuidoresRepository;
+    private DistribuidoresNestRepository distribuidoresRepository;
 
     @Autowired
     private ManejadorDeArchivos manejadorDeArchivos;
@@ -87,7 +91,7 @@ public class ImagenesSCJService {
         if ("prod".equalsIgnoreCase(envProfile)) {
             this.LOGGER.info("La carpeta principal es: " + envProfile);
 
-            String url = ConstantsSCJ.URL_PROD_IMAGES;
+            String url = ConstantsNest.URL_PROD_IMAGES;
             List<String> folders = extractLinksFromPreTag(url);
 
             return folders.stream().filter(d -> !d.contains("scj")).collect(Collectors.toList());
@@ -155,7 +159,7 @@ public class ImagenesSCJService {
         }
 
         if ("prod".equalsIgnoreCase(envProfile)) {
-            String url = ConstantsSCJ.URL_PROD_IMAGES + codBoca;
+            String url = ConstantsNest.URL_PROD_IMAGES + codBoca;
             LOGGER.info("Buscando imagenes en la ruta : " + url);
 
             List<String> folders = extractLinksFromPreTag(url);
@@ -252,7 +256,7 @@ public class ImagenesSCJService {
 
         try {
 
-            Optional<BocaSCJ> opBoca = bocasRepository.findByCodBoca(filters.getCodDistribuidor());
+            Optional<BocaNest> opBoca = bocasRepository.findByCodBoca(filters.getCodDistribuidor());
             if (!opBoca.isPresent()) {
                 throw new UnknownResourceException("No existe la boca " + filters.getCodDistribuidor());
             }
