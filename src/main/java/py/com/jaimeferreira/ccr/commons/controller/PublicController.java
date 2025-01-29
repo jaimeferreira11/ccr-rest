@@ -52,7 +52,7 @@ public class PublicController {
 
     @GetMapping("/images/app")
     public ResponseEntity<byte[]> getImages(
-                                            @WebParam(name = "path") String path) {
+                                            @WebParam(name = "path") String path,  @WebParam(name = "t") String t) {
         LOGGER.info("Get imagen " + path);
 
         byte[] image = null;
@@ -63,6 +63,21 @@ public class PublicController {
             e.printStackTrace();
         }
         return ResponseEntity.ok().contentType(MediaType.IMAGE_JPEG).body(image);
+    }
+
+    @GetMapping("/images/rotate")
+    public ResponseEntity<byte[]> rotateImage(
+                                              @WebParam(name = "path") String path) {
+        LOGGER.info("Rotate imagen " + path);
+
+        try {
+            manejadorDeArchivos.rotateImage(path);
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().build();
+        }
+        return ResponseEntity.ok().build();
     }
 
 }
