@@ -10,12 +10,14 @@ import javax.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.client.RestTemplate;
 
 import py.com.jaimeferreira.ccr.commons.util.ManejadorDeArchivos;
 
@@ -52,7 +54,7 @@ public class PublicController {
 
     @GetMapping("/images/app")
     public ResponseEntity<byte[]> getImages(
-                                            @WebParam(name = "path") String path,  @WebParam(name = "t") String t) {
+                                            @WebParam(name = "path") String path) {
         LOGGER.info("Get imagen " + path);
 
         byte[] image = null;
@@ -78,6 +80,22 @@ public class PublicController {
             return ResponseEntity.internalServerError().build();
         }
         return ResponseEntity.ok().build();
+    }
+    
+    @GetMapping("/images/by-url")
+    public ResponseEntity<byte[]> getImage(@WebParam(name = "imageUrl") String imageUrl) {
+        try {
+            // Descargar la imagen de la URL
+            byte[] imageBytes = new RestTemplate().getForObject(imageUrl, byte[].class);
+
+            // Configurar los headers para la respuesta
+            HttpHeaders headers = new HttpHeaders();
+            headers.add("Content-Type", "image/jpeg"); // Ajusta según el formato de imagen
+
+            return new ResponseEntity<>(imageBytes, headers, HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
     }
 
 }
