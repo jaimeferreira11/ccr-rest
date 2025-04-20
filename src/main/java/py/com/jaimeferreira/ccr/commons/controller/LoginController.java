@@ -67,7 +67,7 @@ public class LoginController {
 
                 if (usuario.getCodCliente() != null && !usuario.getCodCliente().isEmpty()) {
                     if (!usuario.getCodCliente().equalsIgnoreCase(accesoDTO.getCodCliente())) {
-                        return ResponseEntity.status(HttpStatus.FORBIDDEN).body("No existe el usuario");
+                        return ResponseEntity.status(HttpStatus.FORBIDDEN).body("No existe el usuario en ese cliente");
                     }
                 }
 

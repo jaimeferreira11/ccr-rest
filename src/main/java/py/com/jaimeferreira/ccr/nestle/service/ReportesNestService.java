@@ -118,7 +118,7 @@ public class ReportesNestService {
     private JasperPrint generateJasperPrint(Integer idReporte) throws JRException, SQLException {
 
         String resourcePath = "jasper/";
-        String resourceName = "ReportePDV.jrxml";
+        String resourceName = "ReportePDV_NEST.jrxml";
         System.out.println("Attempting to load resource: " + resourcePath + resourceName);
 
         // Load and compile the Jasper report

@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Created with Jaspersoft Studio version 6.21.3.final using JasperReports Library version 6.21.3-4a3078d20785ebe464f18037d738d12fc98c13cf  -->
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="prueba" pageWidth="792" pageHeight="612" orientation="Landscape" columnWidth="752" leftMargin="20" rightMargin="20" topMargin="20" bottomMargin="20" uuid="c05d3cc1-3a52-41c5-99bd-b72e4d00404b">
+	<property name="com.jaspersoft.studio.data.defaultdataadapter" value="DataAdapter.jrdax"/>
+	<property name="com.jaspersoft.studio.data.sql.tables" value=""/>
+	<parameter name="idReporte" class="java.lang.Integer"/>
+	<queryString>
+		<![CDATA[SELECT 
+    detalle->>'codDistribuidor' AS codDistribuidor,
+    detalle->>'nombreDistribuidor' AS nombreDistribuidor,
+    detalle->>'codBoca' AS codBoca,
+    detalle->>'nombreBoca' AS nombreBoca,
+    detalle->>'fecha' AS fecha,
+    detalle->>'titulo' AS titulo,
+    detalle->>'orientacion' AS orientacion,
+    (detalle->>'cantidadImagenes')::int AS cantidadImagenes,
+    (detalle->'pathImagenes'->>0) AS pathImagen1,
+    (detalle->'pathImagenes'->>1) AS pathImagen2
+FROM 
+    nestle.reportes,
+    jsonb_array_elements(detalles) AS detalle
+WHERE 
+    id =  $P{idReporte} ;]]>
+	</queryString>
+	<field name="coddistribuidor" class="java.lang.String">
+		<property name="com.jaspersoft.studio.field.name" value="coddistribuidor"/>
+		<property name="com.jaspersoft.studio.field.label" value="coddistribuidor"/>
+	</field>
+	<field name="nombredistribuidor" class="java.lang.String">
+		<property name="com.jaspersoft.studio.field.name" value="nombredistribuidor"/>
+		<property name="com.jaspersoft.studio.field.label" value="nombredistribuidor"/>
+	</field>
+	<field name="codboca" class="java.lang.String">
+		<property name="com.jaspersoft.studio.field.name" value="codboca"/>
+		<property name="com.jaspersoft.studio.field.label" value="codboca"/>
+	</field>
+	<field name="nombreboca" class="java.lang.String">
+		<property name="com.jaspersoft.studio.field.name" value="nombreboca"/>
+		<property name="com.jaspersoft.studio.field.label" value="nombreboca"/>
+	</field>
+	<field name="fecha" class="java.lang.String">
+		<property name="com.jaspersoft.studio.field.name" value="fecha"/>
+		<property name="com.jaspersoft.studio.field.label" value="fecha"/>
+	</field>
+	<field name="titulo" class="java.lang.String">
+		<property name="com.jaspersoft.studio.field.name" value="titulo"/>
+		<property name="com.jaspersoft.studio.field.label" value="titulo"/>
+	</field>
+	<field name="orientacion" class="java.lang.String">
+		<property name="com.jaspersoft.studio.field.name" value="orientacion"/>
+		<property name="com.jaspersoft.studio.field.label" value="orientacion"/>
+	</field>
+	<field name="cantidadimagenes" class="java.lang.Integer">
+		<property name="com.jaspersoft.studio.field.name" value="cantidadimagenes"/>
+		<property name="com.jaspersoft.studio.field.label" value="cantidadimagenes"/>
+	</field>
+	<field name="pathimagen1" class="java.lang.String">
+		<property name="com.jaspersoft.studio.field.name" value="pathimagen1"/>
+		<property name="com.jaspersoft.studio.field.label" value="pathimagen1"/>
+	</field>
+	<field name="pathimagen2" class="java.lang.String">
+		<property name="com.jaspersoft.studio.field.name" value="pathimagen2"/>
+		<property name="com.jaspersoft.studio.field.label" value="pathimagen2"/>
+	</field>
+	<pageHeader>
+		<band height="40" splitType="Stretch">
+			<frame>
+				<reportElement mode="Opaque" x="-20" y="-20" width="792" height="60" backcolor="#9C1513" uuid="172935d4-cee5-4472-8cf0-cc43b3ed6a1b"/>
+				<textField>
+					<reportElement x="20" y="11" width="170" height="20" forecolor="#FFFFFF" uuid="0fdcf9d9-c96c-4e6e-bc6f-fef0600eb4a4"/>
+					<textElement textAlignment="Left">
+						<font size="14" isBold="true"/>
+					</textElement>
+					<textFieldExpression><![CDATA[$F{nombredistribuidor}]]></textFieldExpression>
+				</textField>
+				<staticText>
+					<reportElement x="20" y="33" width="100" height="20" forecolor="#FFFFFF" uuid="2f79c627-be50-4b7d-9f05-790463644e2a"/>
+					<textElement textAlignment="Left">
+						<font size="12"/>
+					</textElement>
+					<text><![CDATA[DISTRIBUIDOR]]></text>
+				</staticText>
+				<textField>
+					<reportElement x="231" y="10" width="330" height="22" forecolor="#FFFFFF" uuid="b716ad5e-4f25-4be5-b31c-4edda017396f"/>
+					<textElement textAlignment="Center">
+						<font size="14" isBold="true"/>
+					</textElement>
+					<textFieldExpression><![CDATA[$F{nombreboca}]]></textFieldExpression>
+				</textField>
+				<staticText>
+					<reportElement x="231" y="32" width="330" height="20" forecolor="#FFFFFF" uuid="17141919-c703-41e0-af3c-847ef17a411a"/>
+					<textElement textAlignment="Center">
+						<font size="12"/>
+					</textElement>
+					<text><![CDATA[NOMBRE DEL PUNTO DE VENTA]]></text>
+				</staticText>
+				<staticText>
+					<reportElement x="600" y="32" width="170" height="20" forecolor="#FFFFFF" uuid="cd401647-13f2-4550-9f3f-1abf93c38f7c"/>
+					<textElement textAlignment="Right">
+						<font size="12"/>
+					</textElement>
+					<text><![CDATA[FECHA DEL RELEVAMIENTO]]></text>
+				</staticText>
+				<textField>
+					<reportElement x="600" y="10" width="170" height="20" forecolor="#FFFFFF" uuid="e47080f2-3269-4529-a239-9f8e4b845fed"/>
+					<textElement textAlignment="Right">
+						<font size="14" isBold="true"/>
+					</textElement>
+					<textFieldExpression><![CDATA[$F{fecha}]]></textFieldExpression>
+				</textField>
+			</frame>
+		</band>
+	</pageHeader>
+	<columnHeader>
+		<band height="66" splitType="Stretch">
+			<textField>
+				<reportElement x="80" y="16" width="600" height="30" uuid="138df2e3-1983-4e0c-843d-076ac743c59b"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font size="16" isBold="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{titulo}]]></textFieldExpression>
+			</textField>
+		</band>
+	</columnHeader>
+	<detail>
+		<band height="466" splitType="Stretch">
+			<image hAlign="Center" vAlign="Middle">
+				<reportElement x="0" y="0" width="750" height="466" uuid="65ed1a87-8f55-45e2-b804-f3e938b9f2f4">
+					<printWhenExpression><![CDATA[$F{pathimagen2} == null]]></printWhenExpression>
+				</reportElement>
+				<imageExpression><![CDATA[$F{pathimagen1}]]></imageExpression>
+			</image>
+			<image hAlign="Center" vAlign="Middle">
+				<reportElement x="0" y="0" width="380" height="466" uuid="20c38b52-69ae-4e07-b5a6-5a92ddda00d1">
+					<printWhenExpression><![CDATA[$F{pathimagen2} != null &&  $F{orientacion}.equalsIgnoreCase( "VERTICAL" )]]></printWhenExpression>
+				</reportElement>
+				<imageExpression><![CDATA[$F{pathimagen1}]]></imageExpression>
+			</image>
+			<image hAlign="Center" vAlign="Middle">
+				<reportElement x="380" y="0" width="370" height="466" uuid="e857db88-836d-4120-8116-ef3a45139811">
+					<printWhenExpression><![CDATA[$F{pathimagen2} != null &&  $F{orientacion}.equalsIgnoreCase( "VERTICAL" )]]></printWhenExpression>
+				</reportElement>
+				<imageExpression><![CDATA[$F{pathimagen2}]]></imageExpression>
+			</image>
+			<image hAlign="Center" vAlign="Middle">
+				<reportElement x="0" y="0" width="750" height="230" uuid="ff70755a-3f52-4dce-81e2-e8aca831a110">
+					<printWhenExpression><![CDATA[$F{pathimagen2} != null &&  $F{orientacion}.equalsIgnoreCase( "HORIZONTAL" )]]></printWhenExpression>
+				</reportElement>
+				<imageExpression><![CDATA[$F{pathimagen1}]]></imageExpression>
+			</image>
+			<image hAlign="Center" vAlign="Middle">
+				<reportElement x="0" y="240" width="750" height="226" uuid="e60422b5-6804-4e70-899b-1ce0cd0ddad2">
+					<printWhenExpression><![CDATA[$F{pathimagen2} != null &&  $F{orientacion}.equalsIgnoreCase( "HORIZONTAL" )]]></printWhenExpression>
+				</reportElement>
+				<imageExpression><![CDATA[$F{pathimagen2}]]></imageExpression>
+			</image>
+		</band>
+	</detail>
+</jasperReport>
