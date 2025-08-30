@@ -150,6 +150,24 @@ alter table nestle.bocas add foreign key (cod_distribuidor) references nestle.di
 
 
 
+--- Nuevo 06/2025
+
+create table nestle.usuario_distribuidor (
+    id serial primary key,
+    usuario character varying(100) not null,
+    cod_distribuidor character varying(100) not null,
+    foreign key (usuario) references public.usuarios(usuario),
+    foreign key (cod_distribuidor) references nestle.distribuidores(codigo),
+    unique (usuario, cod_distribuidor)
+);
+
+alter table nestle.items ADD COLUMN precios jsonb default '[]';
+
+alter table nestle.respuesta_cab add comentario_ta character varying(500);
+
+
+
+
 -- Ejecutar los privilegios al final
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO ccr;
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA nestle TO ccr;

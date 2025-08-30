@@ -35,7 +35,6 @@ create table nestle.reportes(
 
 
 
-
 -- Ejecutar los privilegios al final
 GRANT USAGE ON SCHEMA nestle TO ccr;
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO ccr;

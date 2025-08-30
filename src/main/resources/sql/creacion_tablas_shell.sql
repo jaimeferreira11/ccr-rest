@@ -109,7 +109,6 @@ create table shell.respuesta_multimedia(
 
 
 
-
 -- Ejecutar los privilegios al final
 GRANT USAGE ON SCHEMA shell TO ccr;
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO ccr;

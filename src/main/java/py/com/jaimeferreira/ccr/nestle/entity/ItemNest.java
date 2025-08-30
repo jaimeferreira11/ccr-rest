@@ -2,6 +2,8 @@
 package py.com.jaimeferreira.ccr.nestle.entity;
 
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -13,6 +15,13 @@ import javax.persistence.Transient;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
 
+import org.hibernate.annotations.Type;
+import org.hibernate.annotations.TypeDef;
+
+import com.vladmihalcea.hibernate.type.json.JsonBinaryType;
+
+import py.com.jaimeferreira.ccr.nestle.dto.PreciosDTO;
+
 /**
  *
  * @author Jaime Ferreira
@@ -20,6 +29,7 @@ import javax.validation.constraints.Size;
 
 @Entity
 @Table(name = "items", schema = "nestle")
+@TypeDef(name = "jsonb", typeClass = JsonBinaryType.class)
 public class ItemNest implements Serializable {
 
     private static final long serialVersionUID = 5839865051790913667L;
@@ -73,6 +83,10 @@ public class ItemNest implements Serializable {
 
     @Column(name = "ORDEN")
     private Integer orden;
+
+    @Type(type = "jsonb")
+    @Column(columnDefinition = "jsonb", name = "precios")
+    private List<PreciosDTO> precios = new ArrayList<>();
 
     @Transient
     private String imgBase64String;
@@ -189,6 +203,17 @@ public class ItemNest implements Serializable {
 
     public void setOrden(Integer orden) {
         this.orden = orden;
+    }
+
+    public List<PreciosDTO> getPrecios() {
+        if (precios == null) {
+            precios = new ArrayList<>();
+        }
+        return precios;
+    }
+
+    public void setPrecios(List<PreciosDTO> precios) {
+        this.precios = precios;
     }
 
 }

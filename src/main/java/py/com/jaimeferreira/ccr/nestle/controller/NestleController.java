@@ -10,7 +10,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -77,6 +80,14 @@ public class NestleController {
     public ResponseEntity<List<BocaNest>> bocas() {
         LOGGER.info("Obteniendo todas las cabeceras...");
         return ResponseEntity.status(HttpStatus.OK).body(bocasService.listMesActual());
+    }
+    
+    @GetMapping(value = "/bocas/usuario", produces = "application/json")
+    public ResponseEntity<List<BocaNest>> bocasbyDistribuidor() {
+        LOGGER.info("Obteniendo todas las bocas por usuario...");
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String currentUsername = authentication.getName();
+        return ResponseEntity.status(HttpStatus.OK).body(bocasService.findByUsuario(currentUsername));
     }
 
     @GetMapping(value = "/respuestas", produces = "application/json")

@@ -3,6 +3,7 @@ package py.com.jaimeferreira.ccr.nestle.service;
 
 import java.time.LocalDate;
 import java.time.format.TextStyle;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -13,10 +14,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import py.com.jaimeferreira.ccr.commons.exception.UnknownResourceException;
+import py.com.jaimeferreira.ccr.commons.repository.UsuarioRepository;
 import py.com.jaimeferreira.ccr.nestle.entity.BocaNest;
 import py.com.jaimeferreira.ccr.nestle.entity.DistribuidorNest;
+import py.com.jaimeferreira.ccr.nestle.entity.UsuarioDistribuidorNest;
 import py.com.jaimeferreira.ccr.nestle.repository.BocasNestRepository;
 import py.com.jaimeferreira.ccr.nestle.repository.DistribuidoresNestRepository;
+import py.com.jaimeferreira.ccr.nestle.repository.UsuarioDistribuidorNestRepository;
 
 /**
  *
@@ -33,6 +37,12 @@ public class BocasNestService {
     
     @Autowired
     private DistribuidoresNestRepository distribuidorRepo;
+    
+    @Autowired
+    private UsuarioRepository userRepo;
+    
+    @Autowired
+    private UsuarioDistribuidorNestRepository userDistribuidorRepo;
 
     public BocaNest findById(Long id) {
         return repository.findById(id).orElse(null);
@@ -53,6 +63,26 @@ public class BocasNestService {
         }
 
         return repository.findByCodDistribuidorAndActivoTrue(codDistribuidor.trim());
+    }
+    
+    public List<BocaNest> findByUsuario(String usuario) {
+
+        List<UsuarioDistribuidorNest> distribuidores = userDistribuidorRepo.findByUsuario(usuario);
+        
+        
+        LOGGER.info("Distribuidores del usuario " + usuario + ": " + distribuidores.size());
+
+        List<BocaNest> bocas = new ArrayList<>();
+
+        if (distribuidores.isEmpty())
+            return bocas;
+
+        distribuidores.stream().forEach(d -> {
+            bocas.addAll(findByDistribuidor(d.getCodDistribuidor()));
+        });
+
+        return bocas;
+
     }
 
     public List<BocaNest> listMesActual() {
