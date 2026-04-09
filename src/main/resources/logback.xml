@@ -15,9 +15,9 @@
 
 	<appender name="fileAppender"
 		class="ch.qos.logback.core.rolling.RollingFileAppender">
-		<file>${logDirectory}/crecer-api-rest.log</file>
+		<file>${logDirectory}/ccr-api-rest.log</file>
 		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-			<fileNamePattern>${logDirectory}/crecer-api-rest_%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+			<fileNamePattern>${logDirectory}/ccr-api-rest_%d{yyyy-MM-dd}.%i.log</fileNamePattern>
 			<timeBasedFileNamingAndTriggeringPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
 				<maxFileSize>30MB</maxFileSize>
 			</timeBasedFileNamingAndTriggeringPolicy>

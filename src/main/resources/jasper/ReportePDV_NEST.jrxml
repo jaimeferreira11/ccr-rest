@@ -131,26 +131,28 @@ WHERE
 				<imageExpression><![CDATA[$F{pathimagen1}]]></imageExpression>
 			</image>
 			<image hAlign="Center" vAlign="Middle">
-				<reportElement x="0" y="0" width="380" height="466" uuid="20c38b52-69ae-4e07-b5a6-5a92ddda00d1">
-					<printWhenExpression><![CDATA[$F{pathimagen2} != null &&  $F{orientacion}.equalsIgnoreCase( "VERTICAL" )]]></printWhenExpression>
+				<reportElement x="50" y="0" width="660" height="220" uuid="ff70755a-3f52-4dce-81e2-e8aca831a110">
+					<printWhenExpression><![CDATA[$F{pathimagen2} != null &&  $F{orientacion}.equalsIgnoreCase( "HORIZONTAL" )]]></printWhenExpression>
 				</reportElement>
 				<imageExpression><![CDATA[$F{pathimagen1}]]></imageExpression>
 			</image>
 			<image hAlign="Center" vAlign="Middle">
-				<reportElement x="380" y="0" width="370" height="466" uuid="e857db88-836d-4120-8116-ef3a45139811">
-					<printWhenExpression><![CDATA[$F{pathimagen2} != null &&  $F{orientacion}.equalsIgnoreCase( "VERTICAL" )]]></printWhenExpression>
+				<reportElement x="50" y="246" width="660" height="220" uuid="e60422b5-6804-4e70-899b-1ce0cd0ddad2">
+					<property name="com.jaspersoft.studio.unit.height" value="px"/>
+					<printWhenExpression><![CDATA[$F{pathimagen2} != null &&  $F{orientacion}.equalsIgnoreCase( "HORIZONTAL" )]]></printWhenExpression>
 				</reportElement>
 				<imageExpression><![CDATA[$F{pathimagen2}]]></imageExpression>
 			</image>
 			<image hAlign="Center" vAlign="Middle">
-				<reportElement x="0" y="0" width="750" height="230" uuid="ff70755a-3f52-4dce-81e2-e8aca831a110">
-					<printWhenExpression><![CDATA[$F{pathimagen2} != null &&  $F{orientacion}.equalsIgnoreCase( "HORIZONTAL" )]]></printWhenExpression>
+				<reportElement x="50" y="0" width="300" height="466" uuid="20c38b52-69ae-4e07-b5a6-5a92ddda00d1">
+					<property name="com.jaspersoft.studio.unit.width" value="px"/>
+					<printWhenExpression><![CDATA[$F{pathimagen2} != null &&  $F{orientacion}.equalsIgnoreCase( "VERTICAL" )]]></printWhenExpression>
 				</reportElement>
 				<imageExpression><![CDATA[$F{pathimagen1}]]></imageExpression>
 			</image>
 			<image hAlign="Center" vAlign="Middle">
-				<reportElement x="0" y="240" width="750" height="226" uuid="e60422b5-6804-4e70-899b-1ce0cd0ddad2">
-					<printWhenExpression><![CDATA[$F{pathimagen2} != null &&  $F{orientacion}.equalsIgnoreCase( "HORIZONTAL" )]]></printWhenExpression>
+				<reportElement x="410" y="0" width="300" height="466" uuid="e857db88-836d-4120-8116-ef3a45139811">
+					<printWhenExpression><![CDATA[$F{pathimagen2} != null &&  $F{orientacion}.equalsIgnoreCase( "VERTICAL" )]]></printWhenExpression>
 				</reportElement>
 				<imageExpression><![CDATA[$F{pathimagen2}]]></imageExpression>
 			</image>
