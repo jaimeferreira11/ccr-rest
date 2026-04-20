@@ -18,8 +18,10 @@ import io.jsonwebtoken.ExpiredJwtException;
 import py.com.jaimeferreira.ccr.commons.dto.AccesoDTO;
 import py.com.jaimeferreira.ccr.commons.dto.ResponseTokenDTO;
 import py.com.jaimeferreira.ccr.commons.dto.ValidarTokenDTO;
+import py.com.jaimeferreira.ccr.commons.entity.Cliente;
 import py.com.jaimeferreira.ccr.commons.entity.UserRole;
 import py.com.jaimeferreira.ccr.commons.entity.Usuario;
+import py.com.jaimeferreira.ccr.commons.repository.ClienteRepository;
 import py.com.jaimeferreira.ccr.commons.repository.UserRolesRepository;
 import py.com.jaimeferreira.ccr.commons.service.AutenticacionService;
 import py.com.jaimeferreira.ccr.commons.util.FechaUtil;
@@ -48,6 +50,9 @@ public class LoginController {
     private AutenticacionService autenticacionService;
 
     @Autowired
+    private ClienteRepository clienteRepository;
+
+    @Autowired
     private UserRolesRepository userRolesRepository;
 
     @Autowired
@@ -62,6 +67,15 @@ public class LoginController {
             if (usuario == null) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body("No existe el usuario");
             }
+
+            if (usuario.getCodCliente() != null && !usuario.getCodCliente().isEmpty()) {
+                Cliente cliente = clienteRepository.findByCodigoIgnoreCase(usuario.getCodCliente())
+                                                   .orElse(null);
+                if (cliente != null && !Boolean.TRUE.equals(cliente.getActivo())) {
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Cliente inactivo");
+                }
+            }
+
             if (accesoDTO.getCodCliente() != null && !accesoDTO.getCodCliente().isEmpty()) {
                 // Flujo nuevo, multi cliente
 
@@ -73,13 +87,10 @@ public class LoginController {
 
             }
 
+            Set<String> rolesUsuario = obtenerRolesUsuario(usuario.getUsuario());
+
             if (accesoDTO.getRoles() != null && accesoDTO.getRoles().size() > 0) {
                 // verificar los roles del usuario
-
-                Set<String> rolesUsuario = userRolesRepository.findByUsuarioIgnoreCase(usuario.getUsuario().trim())
-                                                              .stream()
-                                                              .map(UserRole::getRol)
-                                                              .collect(Collectors.toSet());
 
                 if (rolesUsuario.isEmpty()) {
                     return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Permisos insuficientes");
@@ -97,7 +108,7 @@ public class LoginController {
 
             String token = this.jwtAuthorizationUtils.getJWTToken(usuario.getUsuario().trim());
             jwtAuthorizationFilter.validateTokenString(token);
-            return ResponseEntity.status(HttpStatus.OK).body(new ResponseTokenDTO(usuario, token));
+            return ResponseEntity.status(HttpStatus.OK).body(new ResponseTokenDTO(usuario, token, rolesUsuario));
 
         }
         catch (Exception e) {
@@ -118,7 +129,10 @@ public class LoginController {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body("No existe el usuario");
             }
 
-            return ResponseEntity.status(HttpStatus.OK).body(new ResponseTokenDTO(usuario, validarTokenDTO.getToken()));
+            return ResponseEntity.status(HttpStatus.OK)
+                                 .body(new ResponseTokenDTO(usuario,
+                                                            validarTokenDTO.getToken(),
+                                                            obtenerRolesUsuario(usuario.getUsuario())));
         }
         catch (ExpiredJwtException e) {
             e.printStackTrace();
@@ -132,6 +146,13 @@ public class LoginController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
 
+    }
+
+    private Set<String> obtenerRolesUsuario(String usuario) {
+        return userRolesRepository.findByUsuarioIgnoreCase(usuario.trim())
+                                  .stream()
+                                  .map(UserRole::getRol)
+                                  .collect(Collectors.toSet());
     }
 
 }

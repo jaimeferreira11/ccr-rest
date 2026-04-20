@@ -30,7 +30,7 @@ public class JWTAuthorizationUtils {
                                   grantedAuthorities.stream().map(GrantedAuthority::getAuthority)
                                                     .collect(Collectors.toList()))
                            .setIssuedAt(new Date(System.currentTimeMillis()))
-//                           .setExpiration(new Date(System.currentTimeMillis() + tiempoDeVidaDelToken))
+                           .setExpiration(new Date(System.currentTimeMillis() + tiempoDeVidaDelToken))
                            .signWith(this.getSigningKey()).compact();
         return token;
     }

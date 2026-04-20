@@ -20,6 +20,14 @@
 
 ## Architecture
 
+## Related Frontend Project
+
+The Angular frontend that consumes the `insights` endpoints lives at:
+
+`/Users/jaime/development/workspace-angular/d-insights-ccr`
+
+When a task involves UI flows, admin screens, or frontend/backend contract validation for insights, inspect that project alongside this API.
+
 This is a multi-brand field sales reporting API (PDV — Punto de Venta). Each brand is an isolated sub-package under `py.com.jaimeferreira.ccr`, all sharing a common `commons` package.
 
 **Brand packages and their API base paths:**

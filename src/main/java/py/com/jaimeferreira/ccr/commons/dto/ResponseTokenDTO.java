@@ -1,5 +1,8 @@
 package py.com.jaimeferreira.ccr.commons.dto;
 
+import java.util.Collections;
+import java.util.Set;
+
 import py.com.jaimeferreira.ccr.commons.entity.Usuario;
 
 /**
@@ -11,6 +14,8 @@ public class ResponseTokenDTO {
     private Usuario usuario;
 
     private String token;
+
+    private Set<String> roles;
 
     // private String horaExpiracion;
 
@@ -24,6 +29,14 @@ public class ResponseTokenDTO {
         super();
         this.usuario = usuario;
         this.token = token;
+        this.roles = Collections.emptySet();
+    }
+
+    public ResponseTokenDTO(Usuario usuario, String token, Set<String> roles) {
+        super();
+        this.usuario = usuario;
+        this.token = token;
+        this.roles = roles != null ? roles : Collections.emptySet();
     }
 
     public String getToken() {
@@ -40,6 +53,14 @@ public class ResponseTokenDTO {
 
     public void setUsuario(Usuario usuario) {
         this.usuario = usuario;
+    }
+
+    public Set<String> getRoles() {
+        return roles;
+    }
+
+    public void setRoles(Set<String> roles) {
+        this.roles = roles;
     }
 
 }

@@ -23,6 +23,7 @@ import py.com.jaimeferreira.ccr.security.JWTAuthorizationFilter;
 @SpringBootApplication
 @EnableScheduling
 @ComponentScan(basePackages = "py.com.jaimeferreira.ccr")
+@org.springframework.scheduling.annotation.EnableAsync
 public class CcrRestApplication extends SpringBootServletInitializer {
 
     public static void main(String[] args) {

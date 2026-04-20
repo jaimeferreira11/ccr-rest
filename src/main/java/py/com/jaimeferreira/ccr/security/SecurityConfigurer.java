@@ -12,6 +12,7 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
+import py.com.jaimeferreira.ccr.insights.admin.service.PlataformaStatusFilter;
 import py.com.jaimeferreira.ccr.commons.service.AutenticacionService;
 
 /**
@@ -31,6 +32,9 @@ public class SecurityConfigurer extends WebSecurityConfigurerAdapter {
 
     @Autowired
     private JWTAuthorizationFilter authFiltroToken;
+
+    @Autowired
+    private PlataformaStatusFilter plataformaStatusFilter;
 
     /*
      * ~ BEANS
@@ -89,6 +93,7 @@ public class SecurityConfigurer extends WebSecurityConfigurerAdapter {
             .sessionCreationPolicy(SessionCreationPolicy.STATELESS);
 
         // Indicamos que usaremos un filtro
+        http.addFilterBefore(plataformaStatusFilter, UsernamePasswordAuthenticationFilter.class);
         http.addFilterBefore(authFiltroToken, UsernamePasswordAuthenticationFilter.class);
     }
 }
