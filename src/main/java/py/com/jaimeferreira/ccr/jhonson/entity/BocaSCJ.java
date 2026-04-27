@@ -1,6 +1,8 @@
 
 package py.com.jaimeferreira.ccr.jhonson.entity;
 
+import java.time.LocalDateTime;
+
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
@@ -51,8 +53,14 @@ public class BocaSCJ {
     @Column(name = "externo", nullable = false)
     private boolean externo = false;
 
-    @Column(name = "cod_distribuidor", nullable = false)
+    @Column(name = "cod_distribuidor", length = 50, nullable = false)
     private String codDistribuidor;
+
+    @Column(name = "fecha_creacion", nullable = false, updatable = false, columnDefinition = "timestamp default now()")
+    private LocalDateTime fechaCreacion;
+
+    @Column(name = "auditor", length = 200, nullable = false)
+    private String auditor;
 
     public Long getId() {
         return id;
@@ -148,6 +156,22 @@ public class BocaSCJ {
 
     public void setCodDistribuidor(String codDistribuidor) {
         this.codDistribuidor = codDistribuidor;
+    }
+
+    public LocalDateTime getFechaCreacion() {
+        return fechaCreacion;
+    }
+
+    public void setFechaCreacion(LocalDateTime fechaCreacion) {
+        this.fechaCreacion = fechaCreacion;
+    }
+
+    public String getAuditor() {
+        return auditor;
+    }
+
+    public void setAuditor(String auditor) {
+        this.auditor = auditor;
     }
 
 }

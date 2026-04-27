@@ -6,7 +6,6 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,6 +15,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -24,21 +24,26 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-
 import py.com.jaimeferreira.ccr.commons.exception.InternalServerErrorException;
 import py.com.jaimeferreira.ccr.commons.exception.UnknownResourceException;
+import py.com.jaimeferreira.ccr.insights.dto.CategoriaDTO;
 import py.com.jaimeferreira.ccr.insights.dto.InformeDTO;
+import py.com.jaimeferreira.ccr.insights.dto.InformePageDTO;
 import py.com.jaimeferreira.ccr.insights.entity.ClienteIns;
 import py.com.jaimeferreira.ccr.insights.entity.EstadoInforme;
 import py.com.jaimeferreira.ccr.insights.entity.InformeIns;
 import py.com.jaimeferreira.ccr.insights.entity.Pais;
 import py.com.jaimeferreira.ccr.insights.entity.TipoReporte;
+import py.com.jaimeferreira.ccr.insights.service.CategoriaService;
 import py.com.jaimeferreira.ccr.insights.service.ClienteInsService;
 import py.com.jaimeferreira.ccr.insights.service.InformeInsService;
 import py.com.jaimeferreira.ccr.insights.service.PaisInsService;
 import py.com.jaimeferreira.ccr.insights.service.ReporteInsService;
+
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+
+
 
 
 /**
@@ -63,6 +68,9 @@ public class InsightsController {
     @Autowired
     private ReporteInsService reporteService;
 
+    @Autowired
+    private CategoriaService categoriaService;
+
 
     @GetMapping(value = "/paises", produces = "application/json")
     public ResponseEntity<List<Pais>> paises() {
@@ -76,27 +84,43 @@ public class InsightsController {
         return ResponseEntity.status(HttpStatus.OK).body(clienteService.findByPais(codPais.trim().toUpperCase()));
     }
 
+    @GetMapping(value = "/categorias/{codCliente}", produces = "application/json")
+    public ResponseEntity<List<CategoriaDTO>> categoriasByCliente(@PathVariable String codCliente) {
+        LOGGER.info("Obteniendo categorias activas del cliente: {}", codCliente);
+        List<CategoriaDTO> categorias = categoriaService.findActivasByCliente(codCliente)
+                .stream()
+                .map(CategoriaDTO::from)
+                .collect(java.util.stream.Collectors.toList());
+        return ResponseEntity.ok(categorias);
+    }
+
     /**
      * Inicia la generación de un informe Excel de forma asíncrona.
      * Retorna el registro del informe con estado PROCESANDO inmediatamente.
      *
-     * @param csvData     archivo CSV con los datos subidos por el usuario
-     * @param csvFiltros  archivo CSV con los filtros a aplicar sobre los datos
-     * @param codCliente  código del cliente seleccionado
-     * @param tipoReporte tipo de reporte: NORMAL o CADENA
+     * @param csvData      archivo CSV con los datos subidos por el usuario
+     * @param csvFiltros   archivo CSV con los filtros a aplicar sobre los datos
+     * @param codCliente   código del cliente seleccionado
+     * @param codCategoria código de la categoría seleccionada (determina el template a usar)
+     * @param tipoReporte  tipo de reporte: NORMAL o CADENA
      */
     @PostMapping(value = "/reportes/generar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE, produces = "application/json")
     public ResponseEntity<InformeDTO> generarInforme(
             @RequestParam("csvData") MultipartFile csvData,
             @RequestParam(value = "csvFiltros", required = false) MultipartFile csvFiltros,
             @RequestParam("codCliente") String codCliente,
+            @RequestParam("codCategoria") String codCategoria,
             @RequestParam("tipoReporte") String tipoReporte) {
 
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         String usuario = auth.getName();
 
-        LOGGER.info("Solicitud de generación de informe. Cliente: {}, Tipo: {}, Usuario: {}, filtrosAdjuntos: {}",
-                codCliente, tipoReporte, usuario, (csvFiltros != null && !csvFiltros.isEmpty()));
+        LOGGER.info("Solicitud de generación de informe. Cliente: {}, Categoria: {}, Tipo: {}, Usuario: {}, filtrosAdjuntos: {}",
+                codCliente, codCategoria, tipoReporte, usuario, (csvFiltros != null && !csvFiltros.isEmpty()));
+
+        if (!org.springframework.util.StringUtils.hasText(codCategoria)) {
+            throw new UnknownResourceException("El código de categoría es requerido.");
+        }
 
         TipoReporte tipo;
         try {
@@ -110,28 +134,34 @@ public class InsightsController {
             throw new UnknownResourceException("El archivo CSV de datos no puede estar vacío.");
         }
 
-        InformeIns informe = reporteService.iniciarGeneracion(csvData, csvFiltros, codCliente, tipo, usuario);
+        InformeIns informe = reporteService.iniciarGeneracion(csvData, csvFiltros, codCliente, codCategoria, tipo, usuario);
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(InformeDTO.from(informe));
     }
 
     /**
-     * Retorna los últimos 10 informes del usuario autenticado, ordenados por más recientes.
+     * Lista los informes del usuario autenticado con paginación y filtros opcionales.
+     *
+     * @param estado     filtro por estado del informe (PROCESANDO, COMPLETADO, ERROR)
+     * @param codCliente filtro por código de cliente
+     * @param page       número de página (base 0, default 0)
+     * @param size       cantidad de resultados por página (default 10)
      */
     @GetMapping(value = "/reportes", produces = "application/json")
-    public ResponseEntity<List<InformeDTO>> listarInformes(
-            @RequestParam(value = "estado", required = false) String estado) {
+    public ResponseEntity<InformePageDTO> listarInformes(
+            @RequestParam(value = "estado", required = false) String estado,
+            @RequestParam(value = "codCliente", required = false) String codCliente,
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "size", defaultValue = "10") int size) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         String usuario = auth.getName();
-        LOGGER.info("Listando últimos informes del usuario: {}, filtro estado: {}", usuario, estado);
+        LOGGER.info("Listando informes del usuario: {}, estado: {}, codCliente: {}, page: {}, size: {}",
+                usuario, estado, codCliente, page, size);
 
-        List<InformeIns> informes;
-        if (estado != null && !estado.isEmpty()) {
-            EstadoInforme estadoEnum = EstadoInforme.valueOf(estado.trim().toUpperCase());
-            informes = informeService.findUltimos(usuario, estadoEnum);
-        } else {
-            informes = informeService.findUltimos(usuario);
-        }
-        return ResponseEntity.ok(informes.stream().map(InformeDTO::from).collect(Collectors.toList()));
+        EstadoInforme estadoEnum = (estado != null && !estado.isEmpty())
+                ? EstadoInforme.valueOf(estado.trim().toUpperCase())
+                : null;
+
+        return ResponseEntity.ok(informeService.findUltimos(usuario, codCliente, estadoEnum, page, size));
     }
 
     /**
@@ -177,6 +207,18 @@ public class InsightsController {
         } catch (IOException e) {
             throw new InternalServerErrorException("Error al leer el archivo del informe: " + e.getMessage());
         }
+    }
+
+    /**
+     * Elimina físicamente un informe de la base de datos. Solo permite eliminar informes en estado ERROR.
+     */
+    @DeleteMapping(value = "/reportes/{id}")
+    public ResponseEntity<Void> eliminarInforme(@PathVariable Long id) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String usuario = auth.getName();
+        LOGGER.info("Solicitud de eliminacion de informe id={} por usuario: {}", id, usuario);
+        informeService.eliminar(id);
+        return ResponseEntity.noContent().build();
     }
 
 }

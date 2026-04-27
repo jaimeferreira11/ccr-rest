@@ -27,7 +27,7 @@ import org.springframework.stereotype.Service;
 
 import py.com.jaimeferreira.ccr.commons.exception.UnknownResourceException;
 import py.com.jaimeferreira.ccr.commons.util.ManejadorDeArchivos;
-import py.com.jaimeferreira.ccr.jhonson.constants.ConstantsSCJ;
+
 import py.com.jaimeferreira.ccr.jhonson.dto.ImagenBocaMesDTO;
 import py.com.jaimeferreira.ccr.jhonson.entity.BocaSCJ;
 import py.com.jaimeferreira.ccr.jhonson.repository.BocasSCJRepository;
@@ -53,6 +53,9 @@ public class ImagenesSCJService {
 
     @Value("${path.directory.server_path_images_externo_scj}")
     private String mainPathImagesExterno;
+
+    @Value("${path.directory.url_prod_images_scj}")
+    private String urlProdImages;
 
     @Autowired
     private BocasSCJRepository bocasRepository;
@@ -87,7 +90,7 @@ public class ImagenesSCJService {
         if ("prod".equalsIgnoreCase(envProfile)) {
             this.LOGGER.info("La carpeta principal es: " + envProfile);
 
-            String url = ConstantsSCJ.URL_PROD_IMAGES;
+            String url = urlProdImages;
             List<String> folders = extractLinksFromPreTag(url);
 
             return folders.stream().filter(d -> !d.contains("scj")).collect(Collectors.toList());
@@ -155,7 +158,7 @@ public class ImagenesSCJService {
         }
 
         if ("prod".equalsIgnoreCase(envProfile)) {
-            String url = ConstantsSCJ.URL_PROD_IMAGES + codBoca;
+            String url = urlProdImages + codBoca;
             LOGGER.info("Buscando imagenes en la ruta : " + url);
 
             List<String> folders = extractLinksFromPreTag(url);

@@ -15,6 +15,7 @@ public class InformeDTO {
 
     private Long id;
     private String codCliente;
+    private String codCategoria;
     private TipoReporte tipoReporte;
     private String nombreArchivo;
     private EstadoInforme estado;
@@ -28,6 +29,7 @@ public class InformeDTO {
         InformeDTO dto = new InformeDTO();
         dto.id = informe.getId();
         dto.codCliente = informe.getCodCliente();
+        dto.codCategoria = informe.getCodCategoria();
         dto.tipoReporte = informe.getTipoReporte();
         dto.nombreArchivo = informe.getNombreArchivo();
         dto.estado = informe.getEstado();
@@ -45,6 +47,10 @@ public class InformeDTO {
 
     public String getCodCliente() {
         return codCliente;
+    }
+
+    public String getCodCategoria() {
+        return codCategoria;
     }
 
     public TipoReporte getTipoReporte() {

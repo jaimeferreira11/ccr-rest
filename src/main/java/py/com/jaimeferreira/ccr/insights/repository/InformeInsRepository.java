@@ -17,5 +17,14 @@ public interface InformeInsRepository extends JpaRepository<InformeIns, Long> {
 
     List<InformeIns> findByNombreUsuarioCreacionAndEstadoOrderByFechaCreacionDesc(String usuario, EstadoInforme estado, Pageable pageable);
 
+    List<InformeIns> findByNombreUsuarioCreacionAndCodClienteOrderByFechaCreacionDesc(String usuario, String codCliente, Pageable pageable);
+
+    List<InformeIns> findByNombreUsuarioCreacionAndCodClienteAndEstadoOrderByFechaCreacionDesc(String usuario, String codCliente, EstadoInforme estado, Pageable pageable);
+
+    long countByNombreUsuarioCreacion(String usuario);
+    long countByNombreUsuarioCreacionAndEstado(String usuario, EstadoInforme estado);
+    long countByNombreUsuarioCreacionAndCodCliente(String usuario, String codCliente);
+    long countByNombreUsuarioCreacionAndCodClienteAndEstado(String usuario, String codCliente, EstadoInforme estado);
+
     List<InformeIns> findByEstadoAndFechaCreacionBefore(EstadoInforme estado, LocalDateTime fechaLimite);
 }

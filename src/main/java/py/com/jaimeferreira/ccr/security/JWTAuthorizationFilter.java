@@ -82,8 +82,14 @@ public class JWTAuthorizationFilter extends OncePerRequestFilter {
     }
 
     private Claims validateToken(HttpServletRequest request) {
-        JwtParserBuilder jwtpb = Jwts.parserBuilder().setSigningKey(SECRET.getBytes());
-        return jwtpb.build().parseClaimsJws(request.getHeader(HEADER).replace(PREFIX, "")).getBody();
+        try {
+            JwtParserBuilder jwtpb = Jwts.parserBuilder().setSigningKey(SECRET.getBytes());
+            return jwtpb.build().parseClaimsJws(request.getHeader(HEADER).replace(PREFIX, "")).getBody();
+        }
+        catch (Exception e) {
+            LOGGER.error("Error al validar el token: " + e.getMessage());
+            throw e;
+        }
     }
 
     public Claims validateTokenString(String token) {

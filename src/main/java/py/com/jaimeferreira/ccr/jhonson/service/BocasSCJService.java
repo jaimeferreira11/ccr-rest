@@ -30,6 +30,10 @@ public class BocasSCJService {
     @Autowired
     private DistribuidoresSCJRepository distribuidorRepo;
 
+    public BocaSCJ findById(Long id) {
+        return repository.findById(id).orElse(null);
+    }
+
     public List<BocaSCJ> list() {
         return repository.findByActivoTrue();
     }
@@ -46,8 +50,7 @@ public class BocasSCJService {
 
         return repository.findByCodDistribuidorAndActivoTrue(codDistribuidor.trim());
     }
-    
-    
+
     public List<BocaSCJ> findByDistribuidor(String codDistribuidor, String mes) {
 
         LOGGER.info("Buscando bocas del distribuidor: " + codDistribuidor);
@@ -59,6 +62,15 @@ public class BocasSCJService {
         }
 
         return repository.findByCodDistribuidorAndActivoTrue(codDistribuidor.trim());
+    }
+
+    public List<BocaSCJ> findByAuditor(String auditor) {
+        LOGGER.info("Buscando bocas del auditor: " + auditor);
+        return repository.findByAuditorAndActivoTrue(auditor);
+    }
+
+    public void save(BocaSCJ boca) {
+        repository.save(boca);
     }
 
 }

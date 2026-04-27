@@ -31,7 +31,7 @@ import net.sf.jasperreports.export.SimplePptxReportConfiguration;
 import py.com.jaimeferreira.ccr.commons.exception.UnknownResourceException;
 import py.com.jaimeferreira.ccr.commons.util.ArchivosUtils;
 import py.com.jaimeferreira.ccr.commons.util.ManejadorDeArchivos;
-import py.com.jaimeferreira.ccr.jhonson.constants.ConstantsSCJ;
+
 import py.com.jaimeferreira.ccr.jhonson.entity.ReporteSCJ;
 import py.com.jaimeferreira.ccr.jhonson.repository.DistribuidoresSCJRepository;
 import py.com.jaimeferreira.ccr.jhonson.repository.ReportesSCJRepository;
@@ -62,6 +62,9 @@ public class ReportesSCJService {
     @Value("${env.active}")
     private String envProfile;
 
+    @Value("${path.directory.url_prod_images_scj}")
+    private String urlProdImages;
+
     public Integer save(ReporteSCJ reporte) throws Exception {
 
         if (!distribuidorRepo.findByCodigo(reporte.getCodDistribuidor()).isPresent()) {
@@ -83,7 +86,7 @@ public class ReportesSCJService {
 
                                          if ("prod".equalsIgnoreCase(envProfile)) {
 
-                                             return ConstantsSCJ.URL_PROD_IMAGES.concat(d.getCodBoca()).concat("/")
+                                             return urlProdImages.concat(d.getCodBoca()).concat("/")
                                                                                 .concat(img);
                                          }
 

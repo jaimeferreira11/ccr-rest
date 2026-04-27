@@ -42,6 +42,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -87,24 +88,22 @@ public class ReporteInsService {
 
     // Nombres de meses en español para la hoja Calendario
     private static final String[] MESES_ES = {
-            "enero", "febrero", "marzo", "abril", "mayo", "junio",
-            "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"
+        "enero",
+        "febrero",
+        "marzo",
+        "abril",
+        "mayo",
+        "junio",
+        "julio",
+        "agosto",
+        "septiembre",
+        "octubre",
+        "noviembre",
+        "diciembre"
     };
 
-    // Índices de columnas en el CSV de datos (0-based)
-    private static final int CSV_CATEGORIA       = 0;
-    private static final int CSV_APERTURA        = 1;
-    private static final int CSV_EMPRESA         = 2;
-    private static final int CSV_MARCA           = 3;
-    private static final int CSV_SEGMENTO        = 4;
-    private static final int CSV_MES             = 5;
-    private static final int CSV_ANO             = 6;
-    private static final int CSV_DIST_FISICA     = 7;
-    private static final int CSV_DIST_PONDERADA  = 8;
-    private static final int CSV_FACTURACION     = 9;
-    // CSV[10] = Precio (no se usa en las hojas)
-    private static final int CSV_VOLUMEN         = 11;
-    private static final int CSV_VOLUMEN_UNIDADES = 12;
+    // Los índices de columnas del CSV de datos ahora están en TipoReporte,
+    // ya que NORMAL y CADENA tienen distinto orden y cantidad de columnas.
 
     @Value("${path.directory.server}")
     private String directorioServer;
@@ -124,7 +123,9 @@ public class ReporteInsService {
     @Autowired
     private TemplateInsService templateService;
 
-    /** Self-reference para que @Async funcione a través del proxy de Spring (evita self-invocation). */
+    /**
+     * Self-reference para que @Async funcione a través del proxy de Spring (evita self-invocation).
+     */
     @Lazy
     @Autowired
     private ReporteInsService self;
@@ -134,13 +135,28 @@ public class ReporteInsService {
      * procesamiento asíncrono. Los bytes de ambos CSV se capturan aquí para evitar que
      * los archivos temporales del request expiren antes de que el hilo async los consuma.
      *
-     * @param csvData    archivo CSV con los datos
-     * @param csvFiltros archivo CSV con los filtros a aplicar (puede ser null; si es null se usa el base del cliente)
+     * @param csvData
+     *            archivo CSV con los datos
+     * @param csvFiltros
+     *            archivo CSV con los filtros a aplicar (puede ser null; si es null se usa el base
+     *            del cliente)
+     * @param codCategoria
+     *            código de la categoría seleccionada (determina el template a usar)
      */
     public InformeIns iniciarGeneracion(MultipartFile csvData, MultipartFile csvFiltros,
-                                        String codCliente, TipoReporte tipoReporte, String usuario) {
+                                        String codCliente, String codCategoria, TipoReporte tipoReporte,
+                                        String usuario) {
 
-        LOGGER.info("Iniciando generación de informe. Cliente: {}, Tipo: {}", codCliente, tipoReporte);
+        LOGGER.info("Iniciando generación de informe. Cliente: {}, Tipo: {}, Categoría: {}", codCliente, tipoReporte,
+                    codCategoria);
+        LOGGER.info("  csvData: nombre='{}', tamaño={} bytes", csvData.getOriginalFilename(), csvData.getSize());
+        LOGGER.info("  csvFiltros: {}", csvFiltros != null && !csvFiltros.isEmpty()
+                                                                                    ? "nombre='"
+                                                                                            + csvFiltros.getOriginalFilename()
+                                                                                            + "', tamaño="
+                                                                                            + csvFiltros.getSize()
+                                                                                            + " bytes"
+                                                                                    : "no proporcionado (se usará base del cliente o classpath)");
 
         String codClienteNorm = codCliente.trim().toUpperCase();
 
@@ -150,14 +166,16 @@ public class ReporteInsService {
         byte[] csvBytes;
         byte[] filtroBytes;
         try {
-            csvBytes    = csvData.getBytes();
+            csvBytes = csvData.getBytes();
             filtroBytes = (csvFiltros != null && !csvFiltros.isEmpty()) ? csvFiltros.getBytes() : null;
-        } catch (IOException e) {
+        }
+        catch (IOException e) {
             throw new RuntimeException("Error al leer los archivos CSV: " + e.getMessage(), e);
         }
 
         InformeIns informe = new InformeIns();
         informe.setCodCliente(codClienteNorm);
+        informe.setCodCategoria(codCategoria.trim().toUpperCase());
         informe.setTipoReporte(tipoReporte);
         informe.setEstado(EstadoInforme.PROCESANDO);
         informe.setFechaCreacion(LocalDateTime.now());
@@ -165,7 +183,7 @@ public class ReporteInsService {
 
         InformeIns guardado = informeService.save(informe);
 
-        self.procesarReporte(guardado.getId(), csvBytes, filtroBytes, codCliente, tipoReporte, usuario);
+        self.procesarReporte(guardado.getId(), csvBytes, filtroBytes, codCliente, codCategoria, tipoReporte, usuario);
 
         return guardado;
     }
@@ -173,8 +191,9 @@ public class ReporteInsService {
     /**
      * Valida que existan los archivos base necesarios para generar el informe
      * ANTES de persistir en BD y lanzar el procesamiento async.
-     * - Filtros: debe existir el CSV subido, o filtros_base.csv del cliente, o filtros.csv en classpath.
-     * - Datos base: debe existir datos_base.csv del cliente en disco.
+     * - Filtros: debe existir el CSV subido, o filtros_base.csv del cliente, o filtros.csv en
+     * classpath.
+     * - Datos base: opcional; si no existe se usará solo el CSV del usuario.
      */
     private void validarArchivosBaseExisten(MultipartFile csvFiltros, String codCliente) {
         // Validar filtros: subido > base del cliente > classpath
@@ -185,30 +204,25 @@ public class ReporteInsService {
                 ClassPathResource classpathFiltro = new ClassPathResource(FILTROS_CSV_PATH);
                 if (!classpathFiltro.exists()) {
                     throw new UnknownResourceException(
-                            "No se encontró un archivo de filtros para el cliente " + codCliente
-                            + ". Debe subir un CSV de filtros o configurar filtros_base.csv desde Administración.");
+                                                       "No se encontró un archivo de filtros para el cliente "
+                                                               + codCliente
+                                                               + ". Debe subir un CSV de filtros o configurar filtros_base.csv desde Administración.");
                 }
             }
-        }
-
-        // Validar datos base: debe existir en disco
-        File datosBase = Paths.get(getClienteDir(codCliente), DATOS_BASE_FILENAME).toFile();
-        if (!datosBase.exists()) {
-            throw new UnknownResourceException(
-                    "No se encontró el archivo de datos base para el cliente " + codCliente
-                    + ". Debe subir datos_base.csv desde Administración antes de generar informes.");
         }
     }
 
     /**
      * Procesamiento asíncrono: resuelve filtros, concatena datos base con datos del usuario,
-     * genera el Excel y guarda en disco. Al finalizar persiste el CSV concatenado como nuevo datos_base.
+     * genera el Excel y guarda en disco. Al finalizar persiste el CSV concatenado como nuevo
+     * datos_base.
      *
-     * @param filtroBytes bytes del CSV de filtros subido por el usuario (null si no se subió)
+     * @param filtroBytes
+     *            bytes del CSV de filtros subido por el usuario (null si no se subió)
      */
     @Async
     public void procesarReporte(Long informeId, byte[] csvBytes, byte[] filtroBytes,
-                                String codCliente, TipoReporte tipoReporte, String usuario) {
+                                String codCliente, String codCategoria, TipoReporte tipoReporte, String usuario) {
 
         LOGGER.info("Procesando informe id={} de forma asíncrona", informeId);
 
@@ -228,11 +242,17 @@ public class ReporteInsService {
                 LOGGER.info("  Filtro [{}]: {}", fi, filtros.get(fi));
             }
 
-            // Leer datos base del cliente (obligatorio)
-            byte[] datosBase = leerDatosBase(codClienteNorm);
+            // Mapas de lookup para valores derivados del filtro
+            Map<String, String> ordenAperturaMap = buildLookupMap(filtros, "APERTURA", "Orden_Apertura");
+            Map<String, String> agrupadorSegmentoMap = buildLookupMap(filtros, "SEGMENTO", "AGR_SEGM");
+            LOGGER.info("Mapas de lookup: ordenApertura={}, agrupadorSegmento={}",
+                        ordenAperturaMap, agrupadorSegmentoMap);
 
-            // Concatenar datos base + datos del usuario
-            byte[] csvConcatenado = concatenarCsvData(datosBase, csvBytes);
+            // Concatenar datos base + datos del usuario (datos base es opcional)
+            byte[] datosBase = leerDatosBase(codClienteNorm, tipoReporte);
+            byte[] csvConcatenado = (datosBase != null)
+                                                        ? concatenarCsvData(datosBase, csvBytes)
+                                                        : csvBytes;
             LOGGER.info("CSV concatenado generado ({} bytes) para cliente {}", csvConcatenado.length, codClienteNorm);
 
             // Leer y filtrar data del CSV concatenado
@@ -242,13 +262,14 @@ public class ReporteInsService {
 
             if (totalDataRows <= 0) {
                 throw new RuntimeException(
-                        "El CSV de datos no contiene filas que coincidan con los filtros aplicados. "
-                        + "Verifique que los nombres de columna del filtro coincidan con los del CSV de datos.");
+                                           "El CSV de datos no contiene filas que coincidan con los filtros aplicados. "
+                                                   + "Verifique que los nombres de columna del filtro coincidan con los del CSV de datos.");
             }
 
-            // Abrir template Excel: busca primero el específico del cliente en disco, luego el default.
+            // Abrir template Excel: busca primero el específico del cliente+categoría en disco,
+            // luego el default.
             IOUtils.setByteArrayMaxOverride(Integer.MAX_VALUE);
-            InputStream templateStream = resolverTemplateStream(tipoReporte, codClienteNorm);
+            InputStream templateStream = resolverTemplateStream(tipoReporte, codClienteNorm, codCategoria);
             XSSFWorkbook templateWb = new XSSFWorkbook(templateStream);
             templateStream.close();
 
@@ -257,7 +278,7 @@ public class ReporteInsService {
             limpiarDatosHoja(templateWb, SHEET_FACT);
             limpiarDatosHoja(templateWb, SHEET_TOTAL_EMPRESA);
 
-            int calendarRows = poblarCalendario(templateWb, dataFiltrada);
+            int calendarRows = poblarCalendario(templateWb, dataFiltrada, tipoReporte);
 
             SXSSFWorkbook workbook = new SXSSFWorkbook(templateWb, 100);
             workbook.setCompressTempFiles(true);
@@ -265,11 +286,13 @@ public class ReporteInsService {
             CellStyle dateCellStyle = workbook.createCellStyle();
             dateCellStyle.setDataFormat(workbook.createDataFormat().getFormat("yyyy-mm-dd"));
 
-            poblarFact(workbook, dataFiltrada, codClienteNorm, clienteLabel, pais, dateCellStyle);
-            poblarTotalEmpresa(workbook, dataFiltrada, codClienteNorm, clienteLabel, pais, dateCellStyle);
-            actualizarRangosTablas(templateWb, totalDataRows, calendarRows);
+            poblarFact(workbook, dataFiltrada, codClienteNorm, clienteLabel, pais, dateCellStyle, tipoReporte, ordenAperturaMap, agrupadorSegmentoMap);
+            poblarTotalEmpresa(workbook, dataFiltrada, codClienteNorm, clienteLabel, pais, dateCellStyle, tipoReporte, ordenAperturaMap, agrupadorSegmentoMap);
+            actualizarRangosTablas(templateWb, totalDataRows, calendarRows, tipoReporte);
+            refrescarTablasDinamicas(templateWb);
             ocultarHoja(workbook, SHEET_FACT);
             ocultarHoja(workbook, SHEET_CALENDARIO);
+            ocultarHoja(workbook, SHEET_TOTAL_EMPRESA);
             workbook.setForceFormulaRecalculation(true);
 
             String nombreArchivo = buildNombreArchivo(codClienteNorm, tipoReporte);
@@ -277,14 +300,15 @@ public class ReporteInsService {
             workbook.dispose();
 
             // Persistir el CSV concatenado como nuevo datos_base del cliente
-            guardarDatosBase(codClienteNorm, csvConcatenado);
+            guardarDatosBase(codClienteNorm, tipoReporte, csvConcatenado);
 
             LOGGER.info("Informe {} guardado en: {}", informeId, rutaCompleta);
             long duracion = (System.currentTimeMillis() - inicio) / 1000;
             informeService.marcarCompletado(informeId, nombreArchivo, usuario, duracion);
             LOGGER.info("Informe id={} completado en {}s", informeId, duracion);
 
-        } catch (Throwable t) {
+        }
+        catch (Throwable t) {
             LOGGER.error("Error generando informe id={}: {}", informeId, t.getMessage(), t);
             informeService.marcarError(informeId, t.getMessage(), usuario);
         }
@@ -297,13 +321,15 @@ public class ReporteInsService {
     /**
      * Pobla la hoja FACT.
      * Columnas destino: Dist.Fisica, Dist.Ponderada, Facturación, Volumen, Vol.Unidades,
-     *                   Apertura Geografica, Categoría, CLIENTE, Empresa, hash,
-     *                   Marca, PAIS, Segmento, Agrupador Segmento, Orden Apertura,
-     *                   YTD 1er Mes, Fecha
+     * Apertura Geografica, Categoría, CLIENTE, Empresa, hash,
+     * Marca, PAIS, Segmento, Agrupador Segmento, Orden Apertura,
+     * YTD 1er Mes, Fecha [, Extra (solo CADENA)]
      */
     private void poblarFact(Workbook workbook, List<String[]> data,
-                             String codCliente, String clienteLabel, String pais,
-                             CellStyle dateCellStyle) {
+                            String codCliente, String clienteLabel, String pais,
+                            CellStyle dateCellStyle, TipoReporte tipoReporte,
+                            Map<String, String> ordenAperturaMap,
+                            Map<String, String> agrupadorSegmentoMap) {
 
         Sheet sheet = workbook.getSheet(SHEET_FACT);
         if (sheet == null) {
@@ -311,31 +337,37 @@ public class ReporteInsService {
             sheet = workbook.createSheet(SHEET_FACT);
         }
 
-        int lastOldRow = sheet.getLastRowNum();
         int dataRows = data.size() - 1; // sin header
 
         for (int i = 1; i <= dataRows; i++) {
             String[] csv = data.get(i);
             Row row = sheet.getRow(i);
-            if (row == null) row = sheet.createRow(i);
+            if (row == null)
+                row = sheet.createRow(i);
 
-            setCellNumeric(row,  0, csv[CSV_DIST_FISICA]);
-            setCellNumeric(row,  1, csv[CSV_DIST_PONDERADA]);
-            setCellNumeric(row,  2, csv[CSV_FACTURACION]);
-            setCellNumeric(row,  3, csv[CSV_VOLUMEN]);
-            setCellNumeric(row,  4, csv[CSV_VOLUMEN_UNIDADES]);
-            setCellString(row,   5, csv[CSV_APERTURA]);
-            setCellString(row,   6, csv[CSV_CATEGORIA]);
-            setCellString(row,   7, clienteLabel);
-            setCellString(row,   8, csv[CSV_EMPRESA]);
-            setCellString(row,   9, "");                               // hash
-            setCellString(row,  10, csv[CSV_MARCA]);
-            setCellString(row,  11, pais);
-            setCellString(row,  12, csv[CSV_SEGMENTO]);
-            setCellString(row,  13, derivarAgrupadorSegmento(csv[CSV_SEGMENTO]));
-            setCellString(row,  14, "0");                              // Orden Apertura
-            setCellString(row,  15, derivarYtd(csv[CSV_MES]));
-            setCellDate(row,    16, csv[CSV_MES], csv[CSV_ANO], dateCellStyle);
+            setCellNumeric(row, 0, csv[tipoReporte.getIdxDistFisica()]);
+            setCellNumeric(row, 1, csv[tipoReporte.getIdxDistPonderada()]);
+            setCellNumeric(row, 2, csv[tipoReporte.getIdxFacturacion()]);
+            setCellNumeric(row, 3, csv[tipoReporte.getIdxVolumen()]);
+            setCellNumeric(row, 4, csv[tipoReporte.getIdxVolumenUnidades()]);
+            setCellString(row, 5, csv[tipoReporte.getIdxApertura()]);
+            setCellString(row, 6, csv[tipoReporte.getIdxCategoria()]);
+            setCellString(row, 7, clienteLabel);
+            setCellString(row, 8, csv[tipoReporte.getIdxEmpresa()]);
+            setCellString(row, 9, "");                               // hash
+            setCellString(row, 10, csv[tipoReporte.getIdxMarca()]);
+            setCellString(row, 11, pais);
+            setCellString(row, 12, csv[tipoReporte.getIdxSegmento()]);
+            setCellString(row, 13, agrupadorSegmentoMap.getOrDefault(
+                    normalizar(csv[tipoReporte.getIdxSegmento()]),
+                    derivarAgrupadorSegmento(csv[tipoReporte.getIdxSegmento()])));
+            setCellString(row, 14, ordenAperturaMap.getOrDefault(
+                    normalizar(csv[tipoReporte.getIdxApertura()]), "0"));
+            setCellString(row, 15, derivarYtd(csv[tipoReporte.getIdxMes()]));
+            setCellDate(row, 16, csv[tipoReporte.getIdxMes()], csv[tipoReporte.getIdxAno()], dateCellStyle);
+            if (tipoReporte.tieneExtra()) {
+                setCellString(row, 17, csv[tipoReporte.getIdxExtra()]);
+            }
         }
 
         LOGGER.info("Hoja '{}' poblada con {} filas de datos.", SHEET_FACT, dataRows);
@@ -344,12 +376,14 @@ public class ReporteInsService {
     /**
      * Pobla la hoja Total Empresa.
      * Columnas destino: Dist.Fisica, Dist.Ponderada, Apertura Geografica, Categoría,
-     *                   CLIENTE, Empresa, hash, PAIS, Segmento, Agrupador Segmento,
-     *                   Volumen Unidades, YTD 1er Mes, Orden Apertura, Fecha, Marca
+     * CLIENTE, Empresa, hash, PAIS, Segmento, Agrupador Segmento,
+     * Volumen Unidades, YTD 1er Mes, Orden Apertura, Fecha, Marca [, Extra (solo CADENA)]
      */
     private void poblarTotalEmpresa(Workbook workbook, List<String[]> data,
-                                     String codCliente, String clienteLabel, String pais,
-                                     CellStyle dateCellStyle) {
+                                    String codCliente, String clienteLabel, String pais,
+                                    CellStyle dateCellStyle, TipoReporte tipoReporte,
+                                    Map<String, String> ordenAperturaMap,
+                                    Map<String, String> agrupadorSegmentoMap) {
 
         Sheet sheet = workbook.getSheet(SHEET_TOTAL_EMPRESA);
         if (sheet == null) {
@@ -357,29 +391,35 @@ public class ReporteInsService {
             sheet = workbook.createSheet(SHEET_TOTAL_EMPRESA);
         }
 
-        int lastOldRow = sheet.getLastRowNum();
         int dataRows = data.size() - 1;
 
         for (int i = 1; i <= dataRows; i++) {
             String[] csv = data.get(i);
             Row row = sheet.getRow(i);
-            if (row == null) row = sheet.createRow(i);
+            if (row == null)
+                row = sheet.createRow(i);
 
-            setCellNumeric(row,  0, csv[CSV_DIST_FISICA]);
-            setCellNumeric(row,  1, csv[CSV_DIST_PONDERADA]);
-            setCellString(row,   2, csv[CSV_APERTURA]);
-            setCellString(row,   3, csv[CSV_CATEGORIA]);
-            setCellString(row,   4, clienteLabel);
-            setCellString(row,   5, csv[CSV_EMPRESA]);
-            setCellString(row,   6, "");                               // hash
-            setCellString(row,   7, pais);
-            setCellString(row,   8, csv[CSV_SEGMENTO]);
-            setCellString(row,   9, derivarAgrupadorSegmento(csv[CSV_SEGMENTO]));
-            setCellNumeric(row, 10, csv[CSV_VOLUMEN_UNIDADES]);
-            setCellString(row,  11, derivarYtd(csv[CSV_MES]));
-            setCellString(row,  12, "0");                              // Orden Apertura
-            setCellDate(row,    13, csv[CSV_MES], csv[CSV_ANO], dateCellStyle);
-            setCellString(row,  14, csv[CSV_MARCA]);
+            setCellNumeric(row, 0, csv[tipoReporte.getIdxDistFisica()]);
+            setCellNumeric(row, 1, csv[tipoReporte.getIdxDistPonderada()]);
+            setCellString(row, 2, csv[tipoReporte.getIdxApertura()]);
+            setCellString(row, 3, csv[tipoReporte.getIdxCategoria()]);
+            setCellString(row, 4, clienteLabel);
+            setCellString(row, 5, csv[tipoReporte.getIdxEmpresa()]);
+            setCellString(row, 6, "");                               // hash
+            setCellString(row, 7, pais);
+            setCellString(row, 8, csv[tipoReporte.getIdxSegmento()]);
+            setCellString(row, 9, agrupadorSegmentoMap.getOrDefault(
+                    normalizar(csv[tipoReporte.getIdxSegmento()]),
+                    derivarAgrupadorSegmento(csv[tipoReporte.getIdxSegmento()])));
+            setCellNumeric(row, 10, csv[tipoReporte.getIdxVolumenUnidades()]);
+            setCellString(row, 11, derivarYtd(csv[tipoReporte.getIdxMes()]));
+            setCellString(row, 12, ordenAperturaMap.getOrDefault(
+                    normalizar(csv[tipoReporte.getIdxApertura()]), "0"));
+            setCellDate(row, 13, csv[tipoReporte.getIdxMes()], csv[tipoReporte.getIdxAno()], dateCellStyle);
+            setCellString(row, 14, csv[tipoReporte.getIdxMarca()]);
+            if (tipoReporte.tieneExtra()) {
+                setCellString(row, 15, csv[tipoReporte.getIdxExtra()]);
+            }
         }
 
         LOGGER.info("Hoja '{}' poblada con {} filas de datos.", SHEET_TOTAL_EMPRESA, dataRows);
@@ -392,7 +432,7 @@ public class ReporteInsService {
      *
      * @return cantidad de filas de datos escritas (sin header)
      */
-    private int poblarCalendario(XSSFWorkbook wb, List<String[]> data) {
+    private int poblarCalendario(XSSFWorkbook wb, List<String[]> data, TipoReporte tipoReporte) {
         XSSFSheet sheet = wb.getSheet(SHEET_CALENDARIO);
         if (sheet == null) {
             LOGGER.warn("Hoja '{}' no encontrada en el template, se omite.", SHEET_CALENDARIO);
@@ -403,17 +443,22 @@ public class ReporteInsService {
         int lastOldRow = sheet.getLastRowNum();
         for (int i = lastOldRow; i >= 1; i--) {
             org.apache.poi.xssf.usermodel.XSSFRow row = sheet.getRow(i);
-            if (row != null) sheet.removeRow(row);
+            if (row != null)
+                sheet.removeRow(row);
         }
 
         // Extraer pares (año, mes) únicos del CSV — TreeMap ordena por año, TreeSet por mes
         TreeMap<Integer, TreeSet<Integer>> anioMeses = new TreeMap<>();
         for (int i = 1; i < data.size(); i++) {
             try {
-                int anio = Integer.parseInt(data.get(i)[CSV_ANO].trim());
-                int mes = Integer.parseInt(data.get(i)[CSV_MES].trim());
-                anioMeses.computeIfAbsent(anio, k -> new TreeSet<>()).add(mes);
-            } catch (NumberFormatException ignored) { }
+                int anio = Integer.parseInt(data.get(i)[tipoReporte.getIdxAno()].trim());
+                int mes = Integer.parseInt(data.get(i)[tipoReporte.getIdxMes()].trim());
+                if (mes >= 1 && mes <= 12 && anio >= 1900 && anio <= 9999) {
+                    anioMeses.computeIfAbsent(anio, k -> new TreeSet<>()).add(mes);
+                }
+            }
+            catch (NumberFormatException ignored) {
+            }
         }
 
         // Crear CellStyle de fecha sobre el XSSFWorkbook
@@ -442,7 +487,7 @@ public class ReporteInsService {
 
         int totalRows = rowNum - 1;
         LOGGER.info("Hoja '{}' poblada con {} meses ({} años).",
-                SHEET_CALENDARIO, totalRows, anioMeses.size());
+                    SHEET_CALENDARIO, totalRows, anioMeses.size());
         return totalRows;
     }
 
@@ -454,10 +499,12 @@ public class ReporteInsService {
      */
     private void limpiarDatosHoja(XSSFWorkbook wb, String sheetName) {
         XSSFSheet sheet = wb.getSheet(sheetName);
-        if (sheet == null) return;
+        if (sheet == null)
+            return;
 
         int lastOldRow = sheet.getLastRowNum();
-        if (lastOldRow < 1) return;
+        if (lastOldRow < 1)
+            return;
 
         int removed = 0;
         for (int i = lastOldRow; i >= 1; i--) {
@@ -490,7 +537,8 @@ public class ReporteInsService {
                             cursor.removeXml();
                             changed = true;
                         }
-                    } while (cursor.toNextAttribute());
+                    }
+                    while (cursor.toNextAttribute());
                 }
                 cursor.dispose();
                 if (changed) {
@@ -509,7 +557,8 @@ public class ReporteInsService {
         if (idx >= 0) {
             wb.setSheetVisibility(idx, org.apache.poi.ss.usermodel.SheetVisibility.HIDDEN);
             LOGGER.info("Hoja '{}' (idx={}) marcada como oculta.", sheetName, idx);
-        } else {
+        }
+        else {
             LOGGER.warn("Hoja '{}' no encontrada para ocultar.", sheetName);
         }
     }
@@ -520,16 +569,53 @@ public class ReporteInsService {
      * Esto es crucial para que los pivot tables del template reconozcan
      * correctamente el nuevo rango de datos.
      */
-    private void actualizarRangosTablas(XSSFWorkbook templateWb, int dataRows, int calendarRows) {
-        actualizarTabla(templateWb, SHEET_FACT, "FACT", dataRows, "Q");
-        actualizarTabla(templateWb, SHEET_TOTAL_EMPRESA, "Total_Empresa", dataRows, "O");
+    /**
+     * Marca todas las tablas dinámicas y sus caches para que Excel reconstruya
+     * los datos al abrir el archivo, en lugar de usar el cache del template.
+     *
+     * Se actúa en dos niveles:
+     * 1. PivotTable: refreshOnLoad=true → Excel refresca la tabla al abrir.
+     * 2. PivotCacheDefinition: refreshOnLoad=true → Excel reconstruye el cache
+     *    desde el rango de datos fuente (FACT, Total Empresa, etc.).
+     */
+    private void refrescarTablasDinamicas(XSSFWorkbook wb) {
+        // CTPivotTableDefinition no expone setRefreshOnLoad; el refresh se controla
+        // desde el PivotCacheDefinition, por eso solo se marca allí (ver abajo).
+        int ptCount = 0;
+        for (int i = 0; i < wb.getNumberOfSheets(); i++) {
+            ptCount += wb.getSheetAt(i).getPivotTables().size();
+        }
+
+        // Marcar los pivot caches a nivel del workbook para que Excel reconstruya
+        // el cache al abrir el archivo.
+        int cacheCount = 0;
+        for (org.apache.poi.ooxml.POIXMLDocumentPart part : wb.getRelations()) {
+            if (part instanceof org.apache.poi.xssf.usermodel.XSSFPivotCacheDefinition) {
+                org.apache.poi.xssf.usermodel.XSSFPivotCacheDefinition cacheDef =
+                        (org.apache.poi.xssf.usermodel.XSSFPivotCacheDefinition) part;
+                cacheDef.getCTPivotCacheDefinition().setRefreshOnLoad(true);
+                cacheCount++;
+            }
+        }
+
+        LOGGER.info("Tablas dinámicas: {} pivot tables y {} pivot caches marcados para refresco al abrir.",
+                    ptCount, cacheCount);
+    }
+
+    private void actualizarRangosTablas(XSSFWorkbook templateWb, int dataRows, int calendarRows,
+                                        TipoReporte tipoReporte) {
+        String lastColFact = tipoReporte == TipoReporte.CADENA ? "R" : "Q";
+        String lastColTotalEmpresa = tipoReporte == TipoReporte.CADENA ? "P" : "O";
+        actualizarTabla(templateWb, SHEET_FACT, "FACT", dataRows, lastColFact);
+        actualizarTabla(templateWb, SHEET_TOTAL_EMPRESA, "Total_Empresa", dataRows, lastColTotalEmpresa);
         actualizarTabla(templateWb, SHEET_CALENDARIO, "Calendario", calendarRows, "D");
     }
 
     private void actualizarTabla(XSSFWorkbook wb, String sheetName, String tableName,
-                                  int dataRows, String lastCol) {
+                                 int dataRows, String lastCol) {
         XSSFSheet sheet = wb.getSheet(sheetName);
-        if (sheet == null) return;
+        if (sheet == null)
+            return;
         if (dataRows <= 0) {
             LOGGER.warn("Tabla '{}': 0 filas de datos, se omite actualización de rango.", tableName);
             return;
@@ -540,7 +626,7 @@ public class ReporteInsService {
                 int lastRow = dataRows + 1; // +1 por el header
                 CellReference start = new CellReference(0, 0);
                 CellReference end = new CellReference(lastRow - 1,
-                        CellReference.convertColStringToIndex(lastCol));
+                                                      CellReference.convertColStringToIndex(lastCol));
                 AreaReference newArea = new AreaReference(start, end, wb.getSpreadsheetVersion());
                 table.setArea(newArea);
                 LOGGER.info("Tabla '{}' actualizada: ref={}", tableName, newArea.formatAsString());
@@ -555,13 +641,17 @@ public class ReporteInsService {
     // -------------------------------------------------------------------------
 
     private static final String FILTROS_BASE_FILENAME = "filtros_base.csv";
-    private static final String DATOS_BASE_FILENAME = "datos_base.csv";
-    private static final String DATOS_BASE_BACKUP_FILENAME = "datos_base_backup.csv";
+
+    /** Genera el nombre de archivo de datos base según el tipo de reporte: datos_base_normal.csv / datos_base_cadena.csv */
+    private static String datosBaseFilename(TipoReporte tipo) {
+        return "datos_base_" + tipo.name().toLowerCase() + ".csv";
+    }
+
 
     /** Directorio de archivos base para un cliente: {server}/{clientesSubdir}/{codCliente}/ */
     public String getClienteDir(String codCliente) {
         return directorioServer + File.separator + insightsClientesSubdir
-                + File.separator + codCliente.trim().toUpperCase();
+               + File.separator + codCliente.trim().toUpperCase();
     }
 
     /**
@@ -571,7 +661,8 @@ public class ReporteInsService {
      * 3. Fallback: filtros.csv del classpath
      */
     private List<Map<String, String>> resolverFiltros(byte[] filtroBytes, String codCliente)
-            throws IOException, CsvValidationException {
+                                                                                             throws IOException,
+                                                                                             CsvValidationException {
 
         if (filtroBytes != null && filtroBytes.length > 0) {
             LOGGER.info("Usando filtros subidos por el usuario");
@@ -589,27 +680,39 @@ public class ReporteInsService {
     }
 
     /**
-     * Lee el CSV de datos base del cliente desde disco.
-     * @throws UnknownResourceException si el archivo no existe
+     * Lee el CSV de datos base del cliente desde disco, específico al tipo de reporte.
+     * Busca primero el archivo con sufijo de tipo (datos_base_normal.csv / datos_base_cadena.csv).
+     * Como fallback busca el antiguo datos_base.csv (para compatibilidad con datos existentes).
      */
-    private byte[] leerDatosBase(String codCliente) {
-        File datosBase = Paths.get(getClienteDir(codCliente), DATOS_BASE_FILENAME).toFile();
+    private byte[] leerDatosBase(String codCliente, TipoReporte tipoReporte) {
+        String clienteDir = getClienteDir(codCliente);
+
+        // Buscar primero el archivo específico por tipo
+        File datosBase = Paths.get(clienteDir, datosBaseFilename(tipoReporte)).toFile();
         if (!datosBase.exists()) {
-            throw new UnknownResourceException(
-                    "No se encontró el archivo de datos base para el cliente " + codCliente
-                    + ". Debe subir un archivo datos_base.csv desde Administración antes de generar informes.");
+            // Fallback al archivo antiguo sin sufijo de tipo (compatibilidad)
+            datosBase = Paths.get(clienteDir, "datos_base.csv").toFile();
+        }
+
+        LOGGER.info("Buscando datos base en: {}", datosBase.getAbsolutePath());
+        if (!datosBase.exists()) {
+            LOGGER.info("No existe datos base para cliente {} ({}); se usará solo el CSV del usuario.",
+                        codCliente, tipoReporte);
+            return null;
         }
         try {
             byte[] bytes = Files.readAllBytes(datosBase.toPath());
             LOGGER.info("Datos base leídos para cliente {}: {} bytes", codCliente, bytes.length);
             return bytes;
-        } catch (IOException e) {
+        }
+        catch (IOException e) {
             throw new RuntimeException("Error al leer datos base del cliente " + codCliente + ": " + e.getMessage(), e);
         }
     }
 
     /**
-     * Concatena dos CSV: toma el header + filas del base, y luego solo las filas (sin header) del usuario.
+     * Concatena dos CSV: toma el header + filas del base, y luego solo las filas (sin header) del
+     * usuario.
      * Ambos deben tener el mismo separador (;) y codificación (ISO-8859-1).
      */
     private byte[] concatenarCsvData(byte[] datosBase, byte[] datosUsuario) throws IOException {
@@ -619,51 +722,42 @@ public class ReporteInsService {
         if (datosBase.length > 0 && datosBase[datosBase.length - 1] != '\n') {
             out.write('\n');
         }
-        // Eliminar la primera línea (header) del CSV del usuario
-        String usuarioStr = new String(datosUsuario, StandardCharsets.ISO_8859_1);
-        int firstNewline = usuarioStr.indexOf('\n');
-        if (firstNewline >= 0 && firstNewline < usuarioStr.length() - 1) {
-            byte[] sinHeader = usuarioStr.substring(firstNewline + 1).getBytes(StandardCharsets.ISO_8859_1);
-            out.write(sinHeader);
+        // Eliminar la primera línea (header) del CSV del usuario trabajando en bytes
+        // para evitar problemas de codificación (UTF-8 vs ISO-8859-1).
+        int firstNewline = -1;
+        for (int i = 0; i < datosUsuario.length; i++) {
+            if (datosUsuario[i] == '\n') {
+                firstNewline = i;
+                break;
+            }
+        }
+        if (firstNewline >= 0 && firstNewline < datosUsuario.length - 1) {
+            out.write(datosUsuario, firstNewline + 1, datosUsuario.length - firstNewline - 1);
         }
         return out.toByteArray();
     }
 
     /**
-     * Guarda el CSV concatenado como nuevo datos_base.csv del cliente.
+     * Guarda el CSV concatenado como datos_base del cliente, específico al tipo de reporte.
+     * Archivo: datos_base_normal.csv o datos_base_cadena.csv.
      * Utiliza escritura atómica (temp + rename) para evitar corrupción.
      */
-    private void guardarDatosBase(String codCliente, byte[] csvConcatenado) {
+    private void guardarDatosBase(String codCliente, TipoReporte tipoReporte, byte[] csvConcatenado) {
         try {
             java.nio.file.Path clienteDir = Paths.get(getClienteDir(codCliente));
             if (!Files.exists(clienteDir)) {
                 Files.createDirectories(clienteDir);
             }
-            java.nio.file.Path destino = clienteDir.resolve(DATOS_BASE_FILENAME);
-            // Backup del archivo actual antes de sobreescribir
-            backupDatosBase(clienteDir, destino);
-            java.nio.file.Path temp = clienteDir.resolve(DATOS_BASE_FILENAME + ".tmp");
+            String filename = datosBaseFilename(tipoReporte);
+            java.nio.file.Path destino = clienteDir.resolve(filename);
+            java.nio.file.Path temp = clienteDir.resolve(filename + ".tmp");
             Files.write(temp, csvConcatenado);
             Files.move(temp, destino, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
-            LOGGER.info("Datos base actualizados para cliente {}: {} bytes", codCliente, csvConcatenado.length);
-        } catch (IOException e) {
-            LOGGER.error("Error al guardar datos base del cliente {}: {}", codCliente, e.getMessage(), e);
+            LOGGER.info("Datos base ({}) actualizados para cliente {}: {} bytes",
+                        tipoReporte, codCliente, csvConcatenado.length);
         }
-    }
-
-    /**
-     * Copia el datos_base.csv actual a datos_base_backup.csv (sobreescribiendo el backup anterior).
-     * Permite hacer rollback manual ante anomalías.
-     */
-    private void backupDatosBase(java.nio.file.Path clienteDir, java.nio.file.Path datosBaseActual) {
-        try {
-            if (Files.exists(datosBaseActual)) {
-                java.nio.file.Path backup = clienteDir.resolve(DATOS_BASE_BACKUP_FILENAME);
-                Files.copy(datosBaseActual, backup, StandardCopyOption.REPLACE_EXISTING);
-                LOGGER.info("Backup de datos base creado: {}", backup);
-            }
-        } catch (IOException e) {
-            LOGGER.warn("No se pudo crear backup de datos base: {}", e.getMessage());
+        catch (IOException e) {
+            LOGGER.error("Error al guardar datos base del cliente {}: {}", codCliente, e.getMessage(), e);
         }
     }
 
@@ -677,14 +771,11 @@ public class ReporteInsService {
                 Files.createDirectories(clienteDir);
             }
             java.nio.file.Path destino = clienteDir.resolve(nombreArchivo);
-            // Backup si se está reemplazando datos_base.csv
-            if (DATOS_BASE_FILENAME.equals(nombreArchivo)) {
-                backupDatosBase(clienteDir, destino);
-            }
             archivo.transferTo(destino.toFile());
             LOGGER.info("Archivo base '{}' guardado para cliente {}: {}", nombreArchivo, codCliente, destino);
             return destino.toAbsolutePath().toString();
-        } catch (IOException e) {
+        }
+        catch (IOException e) {
             throw new RuntimeException("Error al guardar archivo base: " + e.getMessage(), e);
         }
     }
@@ -698,12 +789,15 @@ public class ReporteInsService {
         List<Map<String, String>> filtros = new ArrayList<>();
 
         try (CSVReader reader = new CSVReaderBuilder(
-                new InputStreamReader(resource.getInputStream(), StandardCharsets.UTF_8))
-                .withCSVParser(new CSVParserBuilder().withSeparator(CSV_SEPARATOR).build())
-                .build()) {
+                                                     new InputStreamReader(resource.getInputStream(),
+                                                                           StandardCharsets.UTF_8))
+                                                                                                   .withCSVParser(new CSVParserBuilder().withSeparator(CSV_SEPARATOR)
+                                                                                                                                        .build())
+                                                                                                   .build()) {
 
             String[] headers = reader.readNext();
-            if (headers == null) return filtros;
+            if (headers == null)
+                return filtros;
 
             String[] fila;
             while ((fila = reader.readNext()) != null) {
@@ -714,7 +808,8 @@ public class ReporteInsService {
                         regla.put(headers[i].trim(), valor);
                     }
                 }
-                if (!regla.isEmpty()) filtros.add(regla);
+                if (!regla.isEmpty())
+                    filtros.add(regla);
             }
         }
         return filtros;
@@ -724,16 +819,21 @@ public class ReporteInsService {
      * Lee los filtros desde los bytes de un CSV subido por el usuario.
      * El formato esperado es el mismo que el de resources/insights/filtros.csv.
      */
-    private List<Map<String, String>> leerFiltrosDesdeBytes(byte[] filtroBytes) throws IOException, CsvValidationException {
+    private List<Map<String, String>> leerFiltrosDesdeBytes(byte[] filtroBytes) throws IOException,
+                                                                                CsvValidationException {
         List<Map<String, String>> filtros = new ArrayList<>();
 
+        Charset encoding = detectarEncoding(filtroBytes);
         try (CSVReader reader = new CSVReaderBuilder(
-                new InputStreamReader(new ByteArrayInputStream(filtroBytes), StandardCharsets.UTF_8))
-                .withCSVParser(new CSVParserBuilder().withSeparator(CSV_SEPARATOR).build())
-                .build()) {
+                                                     new InputStreamReader(new ByteArrayInputStream(filtroBytes),
+                                                                           encoding))
+                                                                                                   .withCSVParser(new CSVParserBuilder().withSeparator(CSV_SEPARATOR)
+                                                                                                                                        .build())
+                                                                                                   .build()) {
 
             String[] headers = reader.readNext();
-            if (headers == null) return filtros;
+            if (headers == null)
+                return filtros;
 
             String[] fila;
             while ((fila = reader.readNext()) != null) {
@@ -744,7 +844,8 @@ public class ReporteInsService {
                         regla.put(headers[i].trim(), valor);
                     }
                 }
-                if (!regla.isEmpty()) filtros.add(regla);
+                if (!regla.isEmpty())
+                    filtros.add(regla);
             }
         }
         return filtros;
@@ -755,20 +856,39 @@ public class ReporteInsService {
      * La primera fila retornada siempre es el header.
      */
     private List<String[]> leerYFiltrarCsvData(byte[] csvBytes,
-                                                List<Map<String, String>> filtros)
-            throws IOException, CsvValidationException {
+                                               List<Map<String, String>> filtros)
+                                                                                  throws IOException,
+                                                                                  CsvValidationException {
 
         List<String[]> resultado = new ArrayList<>();
 
+        // Diagnóstico: primeros 100 bytes del CSV para determinar encoding
+//        int diagLen = Math.min(100, csvBytes.length);
+//        StringBuilder hexDump = new StringBuilder();
+//        StringBuilder charDump = new StringBuilder();
+//        for (int i = 0; i < diagLen; i++) {
+//            int b = csvBytes[i] & 0xFF;
+//            hexDump.append(String.format("%02X ", b));
+//            charDump.append((b >= 32 && b < 127) ? (char) b : '.');
+//        }
+//        LOGGER.info("CSV encoding diagnóstico - primeros {} bytes:", diagLen);
+//        LOGGER.info("  HEX:  {}", hexDump.toString().trim());
+//        LOGGER.info("  TEXT: {}", charDump);
+
+        Charset encoding = detectarEncoding(csvBytes);
         try (CSVReader reader = new CSVReaderBuilder(
-                new InputStreamReader(new ByteArrayInputStream(csvBytes), StandardCharsets.ISO_8859_1))
-                .withCSVParser(new CSVParserBuilder().withSeparator(CSV_SEPARATOR).build())
-                .build()) {
+                                                     new InputStreamReader(new ByteArrayInputStream(csvBytes),
+                                                                           encoding))
+                                                                                                   .withCSVParser(new CSVParserBuilder().withSeparator(CSV_SEPARATOR)
+                                                                                                                                        .build())
+                                                                                                   .build()) {
 
             String[] headers = reader.readNext();
-            if (headers == null) return resultado;
+            if (headers == null)
+                return resultado;
 
-            for (int i = 0; i < headers.length; i++) headers[i] = headers[i].trim();
+            for (int i = 0; i < headers.length; i++)
+                headers[i] = headers[i].trim();
             resultado.add(headers);
 
             LOGGER.info("Headers del CSV de datos ({} columnas):", headers.length);
@@ -777,45 +897,193 @@ public class ReporteInsService {
             }
 
             Map<String, Integer> colIndex = new HashMap<>();
-            for (int i = 0; i < headers.length; i++) colIndex.put(headers[i], i);
+            for (int i = 0; i < headers.length; i++)
+                colIndex.put(normalizar(headers[i]), i);
 
             // Validar que todas las claves de los filtros existen en el CSV
             for (Map<String, String> regla : filtros) {
                 for (String clave : regla.keySet()) {
-                    if (!colIndex.containsKey(clave)) {
+                    if (!colIndex.containsKey(normalizar(clave))) {
                         LOGGER.warn("  *** Clave de filtro '{}' NO encontrada en los headers del CSV ***", clave);
-                    } else {
+                    }
+                    else {
                         LOGGER.info("  Clave de filtro '{}' → columna [{}], valor buscado: '{}'",
-                                clave, colIndex.get(clave), regla.get(clave));
+                                    clave, colIndex.get(normalizar(clave)), regla.get(clave));
                     }
                 }
             }
 
             String[] fila;
             while ((fila = reader.readNext()) != null) {
-                if (filaCumpleFiltros(fila, colIndex, filtros)) resultado.add(fila);
+                if (filaCumpleFiltros(fila, colIndex, filtros))
+                    resultado.add(fila);
             }
         }
         return resultado;
     }
 
     /**
-     * Retorna true si la fila cumple al menos una regla de filtro (OR entre filas, AND entre columnas).
+     * Retorna true si la fila cumple al menos una regla de filtro (OR entre filas, AND entre
+     * columnas).
      */
     private boolean filaCumpleFiltros(String[] fila, Map<String, Integer> colIndex,
-                                       List<Map<String, String>> filtros) {
-        if (filtros.isEmpty()) return true;
+                                      List<Map<String, String>> filtros) {
+        if (filtros.isEmpty())
+            return true;
 
         for (Map<String, String> regla : filtros) {
             boolean cumple = true;
             for (Map.Entry<String, String> condicion : regla.entrySet()) {
-                Integer idx = colIndex.get(condicion.getKey());
-                if (idx == null || idx >= fila.length) { cumple = false; break; }
-                if (!fila[idx].trim().equalsIgnoreCase(condicion.getValue())) { cumple = false; break; }
+                Integer idx = colIndex.get(normalizar(condicion.getKey()));
+                if (idx == null) {
+                    continue; // Clave del filtro no existe en el CSV de datos (ej: AGR_SEGM, Orden_Apertura); se ignora
+                }
+                if (idx >= fila.length) {
+                    cumple = false;
+                    break;
+                }
+                if (!normalizar(fila[idx]).equals(normalizar(condicion.getValue()))) {
+                    cumple = false;
+                    break;
+                }
             }
-            if (cumple) return true;
+            if (cumple)
+                return true;
         }
         return false;
+    }
+
+    /**
+     * Busca un valor en una regla de filtro por nombre de clave, comparando de forma normalizada.
+     */
+    private String findFilterValue(Map<String, String> regla, String key) {
+        String normKey = normalizar(key);
+        for (Map.Entry<String, String> entry : regla.entrySet()) {
+            if (normalizar(entry.getKey()).equals(normKey)) {
+                return entry.getValue();
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Construye un mapa de lookup a partir de los filtros, asociando los valores normalizados
+     * de keyColumn con los valores originales de valueColumn.
+     * Ejemplo: buildLookupMap(filtros, "APERTURA", "Orden_Apertura") → {"total paraguay" → "1", ...}
+     */
+    private Map<String, String> buildLookupMap(List<Map<String, String>> filtros,
+                                                String keyColumn, String valueColumn) {
+        Map<String, String> map = new HashMap<>();
+        for (Map<String, String> regla : filtros) {
+            String key = findFilterValue(regla, keyColumn);
+            String value = findFilterValue(regla, valueColumn);
+            if (key != null && value != null) {
+                map.put(normalizar(key), value);
+            }
+        }
+        return map;
+    }
+
+    /**
+     * Normaliza un valor para comparaciones insensibles a mayúsculas/minúsculas y acentos.
+     * <p>
+     * Usa descomposición Unicode NFD para separar los caracteres base de sus diacríticos
+     * (tildes, diéresis, cedilla, etc.) y luego los elimina con una expresión regular.
+     * Esto cubre todos los caracteres del español (á,é,í,ó,ú,ñ,ü,Á,É...) y cualquier
+     * otro idioma, sin necesidad de reemplazos individuales.
+     *
+     * @param valor cadena a normalizar; null devuelve cadena vacía
+     * @return cadena sin acentos, en minúsculas y sin espacios extremos
+     */
+    private String normalizar(String valor) {
+        if (valor == null) return "";
+        return java.text.Normalizer
+                .normalize(valor.trim(), java.text.Normalizer.Form.NFD)
+                .replaceAll("\\p{InCombiningDiacriticalMarks}", "")
+                .toLowerCase();
+    }
+
+    // -------------------------------------------------------------------------
+    // Detección de encoding
+    // -------------------------------------------------------------------------
+
+    /**
+     * Detecta el encoding de un array de bytes CSV.
+     * <ol>
+     *   <li>Si comienza con BOM UTF-8 (EF BB BF), retorna UTF-8.</li>
+     *   <li>Si todos los bytes forman una secuencia UTF-8 válida y hay al menos
+     *       un carácter multibyte (&gt; 0x7F), retorna UTF-8.</li>
+     *   <li>Si hay bytes en el rango 0x80-0x9F rodeados de letras ASCII
+     *       (típico de letras acentuadas MacRoman dentro de palabras como
+     *       "Categor[0x92=í]a"), retorna MacRoman.</li>
+     *   <li>En caso contrario retorna cp1252 (Windows-1252), que es el encoding
+     *       por defecto de Excel en Windows.</li>
+     * </ol>
+     */
+    private Charset detectarEncoding(byte[] bytes) {
+        // 1. BOM UTF-8
+        if (bytes.length >= 3
+                && (bytes[0] & 0xFF) == 0xEF
+                && (bytes[1] & 0xFF) == 0xBB
+                && (bytes[2] & 0xFF) == 0xBF) {
+            LOGGER.info("Encoding detectado: UTF-8 (BOM)");
+            return StandardCharsets.UTF_8;
+        }
+
+        // 2. Validar si es UTF-8 con secuencias multibyte
+        boolean hayMultibyte = false;
+        int i = 0;
+        while (i < bytes.length) {
+            int b = bytes[i] & 0xFF;
+            if (b <= 0x7F) {
+                i++;
+            } else if (b >= 0xC2 && b <= 0xDF) {
+                if (i + 1 >= bytes.length || (bytes[i + 1] & 0xC0) != 0x80) break;
+                hayMultibyte = true;
+                i += 2;
+            } else if (b >= 0xE0 && b <= 0xEF) {
+                if (i + 2 >= bytes.length || (bytes[i + 1] & 0xC0) != 0x80 || (bytes[i + 2] & 0xC0) != 0x80) break;
+                hayMultibyte = true;
+                i += 3;
+            } else if (b >= 0xF0 && b <= 0xF4) {
+                if (i + 3 >= bytes.length || (bytes[i + 1] & 0xC0) != 0x80
+                        || (bytes[i + 2] & 0xC0) != 0x80 || (bytes[i + 3] & 0xC0) != 0x80) break;
+                hayMultibyte = true;
+                i += 4;
+            } else {
+                break;
+            }
+        }
+        if (i == bytes.length && hayMultibyte) {
+            LOGGER.info("Encoding detectado: UTF-8 (heurística)");
+            return StandardCharsets.UTF_8;
+        }
+
+        // 3. Distinguir MacRoman vs cp1252
+        // En MacRoman, los bytes 0x80-0x9F son letras acentuadas (á=0x87, é=0x8E, í=0x92,
+        // ó=0x97, ú=0x9C, ñ=0x96) que aparecen DENTRO de palabras, rodeadas de letras ASCII.
+        // En cp1252, esos mismos bytes son comillas tipográficas, guiones em/en, etc.,
+        // que aparecen entre palabras, no dentro.
+        int macRomanHits = 0;
+        for (int j = 1; j < bytes.length - 1; j++) {
+            int b = bytes[j] & 0xFF;
+            if (b >= 0x80 && b <= 0x9F) {
+                int prev = bytes[j - 1] & 0xFF;
+                int next = bytes[j + 1] & 0xFF;
+                boolean prevEsLetra = (prev >= 'A' && prev <= 'Z') || (prev >= 'a' && prev <= 'z');
+                boolean nextEsLetra = (next >= 'A' && next <= 'Z') || (next >= 'a' && next <= 'z');
+                if (prevEsLetra && nextEsLetra) {
+                    macRomanHits++;
+                }
+            }
+        }
+        if (macRomanHits > 0) {
+            LOGGER.info("Encoding detectado: MacRoman ({} bytes acentuados dentro de palabras)", macRomanHits);
+            return Charset.forName("MacRoman");
+        }
+
+        LOGGER.info("Encoding detectado: cp1252 (fallback Windows)");
+        return Charset.forName("cp1252");
     }
 
     // -------------------------------------------------------------------------
@@ -839,7 +1107,8 @@ public class ReporteInsService {
         try {
             double d = Double.parseDouble(value.trim().replace(",", "."));
             row.createCell(col, CellType.NUMERIC).setCellValue(d);
-        } catch (NumberFormatException e) {
+        }
+        catch (NumberFormatException e) {
             row.createCell(col, CellType.STRING).setCellValue(value.trim());
         }
     }
@@ -856,7 +1125,8 @@ public class ReporteInsService {
             Cell cell = row.createCell(col, CellType.NUMERIC);
             cell.setCellValue(date);
             cell.setCellStyle(dateCellStyle);
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
             row.createCell(col, CellType.BLANK);
         }
     }
@@ -870,7 +1140,8 @@ public class ReporteInsService {
      * "TOT.PROD." → "TOT.PROD." | cualquier otro → "POR TIPO"
      */
     private String derivarAgrupadorSegmento(String segmento) {
-        if (segmento == null) return "POR TIPO";
+        if (segmento == null)
+            return "POR TIPO";
         return "TOT.PROD.".equalsIgnoreCase(segmento.trim()) ? "TOT.PROD." : "POR TIPO";
     }
 
@@ -886,7 +1157,8 @@ public class ReporteInsService {
     private String guardarEnDisco(Workbook workbook, String nombreArchivo) throws IOException {
         String dirReportes = directorioServer + File.separator + insightsReportsSubdir;
         File directorio = new File(dirReportes);
-        if (!directorio.exists()) directorio.mkdirs();
+        if (!directorio.exists())
+            directorio.mkdirs();
 
         String rutaCompleta = dirReportes + File.separator + nombreArchivo;
         try (FileOutputStream fos = new FileOutputStream(rutaCompleta)) {
@@ -901,27 +1173,36 @@ public class ReporteInsService {
     }
 
     /**
-     * Resuelve el InputStream del template a usar para el tipo y cliente dados.
-     * Busca en disco primero (disco → default en disco → classpath como último recurso).
+     * Resuelve el InputStream del template a usar para el tipo, cliente y categoría dados.
+     * Los templates ahora se buscan en el directorio del cliente (junto con filtros_base y datos_base).
+     * Busca: cliente+categoría → sólo cliente → default en dir cliente → classpath.
      */
-    private InputStream resolverTemplateStream(TipoReporte tipoReporte, String codCliente) throws IOException {
-        String dir = templateService.getTemplatesDir();
+    private InputStream resolverTemplateStream(TipoReporte tipoReporte, String codCliente,
+                                               String codCategoria) throws IOException {
+        String dir = templateService.getTemplatesDir(codCliente);
 
-        // 1. Template específico del cliente en disco
+        // 1. Template específico del cliente + categoría en disco
+        File clientCatFile = Paths.get(dir, tipoReporte.getTemplateFileName(codCliente, codCategoria)).toFile();
+        if (clientCatFile.exists()) {
+            LOGGER.info("Usando template de cliente+categoría en disco: {}", clientCatFile.getAbsolutePath());
+            return new FileInputStream(clientCatFile);
+        }
+
+        // 2. Template específico del cliente (sin categoría) en disco — fallback
         File clientFile = Paths.get(dir, tipoReporte.getTemplateFileName(codCliente)).toFile();
         if (clientFile.exists()) {
             LOGGER.info("Usando template de cliente en disco: {}", clientFile.getAbsolutePath());
             return new FileInputStream(clientFile);
         }
 
-        // 2. Template por defecto en disco
+        // 3. Template por defecto en disco del cliente
         File defaultFile = Paths.get(dir, tipoReporte.getDefaultTemplateFileName()).toFile();
         if (defaultFile.exists()) {
             LOGGER.info("Usando template por defecto en disco: {}", defaultFile.getAbsolutePath());
             return new FileInputStream(defaultFile);
         }
 
-        // 3. Fallback: template por defecto en classpath (recursos del proyecto)
+        // 4. Fallback: template por defecto en classpath (recursos del proyecto)
         ClassPathResource fallback = new ClassPathResource(tipoReporte.getDefaultTemplatePath());
         LOGGER.warn("Template no encontrado en disco, usando classpath: {}", fallback.getPath());
         return fallback.getInputStream();
@@ -930,6 +1211,5 @@ public class ReporteInsService {
     public String getRutaArchivo(String nombreArchivo) {
         return directorioServer + File.separator + insightsReportsSubdir + File.separator + nombreArchivo;
     }
-    
-}
 
+}

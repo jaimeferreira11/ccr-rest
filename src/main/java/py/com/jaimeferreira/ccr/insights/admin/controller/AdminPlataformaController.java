@@ -20,8 +20,10 @@ import org.springframework.web.bind.annotation.RestController;
 import py.com.jaimeferreira.ccr.insights.admin.dto.PlataformaEstadoRequestDTO;
 import py.com.jaimeferreira.ccr.insights.admin.entity.PlataformaConfig;
 import py.com.jaimeferreira.ccr.insights.admin.service.PlataformaService;
+import py.com.jaimeferreira.ccr.insights.dto.CategoriaDTO;
 import py.com.jaimeferreira.ccr.insights.dto.ClienteInsDTO;
 import py.com.jaimeferreira.ccr.insights.dto.PaisDTO;
+import py.com.jaimeferreira.ccr.insights.service.CategoriaService;
 import py.com.jaimeferreira.ccr.insights.service.ClienteInsService;
 import py.com.jaimeferreira.ccr.insights.service.PaisInsService;
 import java.util.Map;
@@ -62,6 +64,9 @@ public class AdminPlataformaController {
 
     @Autowired
     private TemplateInsService templateInsService;
+
+    @Autowired
+    private CategoriaService categoriaService;
 
     /** Retorna el estado actual de la plataforma. */
     @GetMapping(value = "/plataforma", produces = "application/json")
@@ -165,11 +170,12 @@ public class AdminPlataformaController {
     /**
      * Sube archivos base para un cliente específico.
      * Los 3 archivos son opcionales; se procesa solo lo que se envía.
-     * Si se envía template, tipoReporte es obligatorio.
+     * Si se envía template, tipoReporte y codCategoria son obligatorios.
      *
-     * @param codCliente    código del cliente
-     * @param template      archivo Excel (.xlsx) del template (opcional)
-     * @param tipoReporte   tipo de reporte: NORMAL o CADENA (obligatorio si se envía template)
+     * @param codCliente     código del cliente
+     * @param template       archivo Excel (.xlsx) del template (opcional)
+     * @param tipoReporte    tipo de reporte: NORMAL o CADENA (obligatorio si se envía template)
+     * @param codCategoria   código de categoría (obligatorio si se envía template)
      * @param csvFiltrosBase archivo CSV de filtros base (opcional)
      * @param csvDatosBase   archivo CSV de datos base (opcional)
      */
@@ -180,8 +186,10 @@ public class AdminPlataformaController {
             @PathVariable String codCliente,
             @RequestParam(value = "template", required = false) MultipartFile template,
             @RequestParam(value = "tipoReporte", required = false) String tipoReporte,
+            @RequestParam(value = "codCategoria", required = false) String codCategoria,
             @RequestParam(value = "csvFiltrosBase", required = false) MultipartFile csvFiltrosBase,
-            @RequestParam(value = "csvDatosBase", required = false) MultipartFile csvDatosBase) {
+            @RequestParam(value = "csvDatosBase", required = false) MultipartFile csvDatosBase,
+            @RequestParam(value = "sanitizar", defaultValue = "true") boolean sanitizar) {
 
         String usuario = SecurityContextHolder.getContext().getAuthentication().getName();
         LOGGER.info("Usuario '{}' sube archivos base para cliente: {}", usuario, codCliente);
@@ -202,6 +210,9 @@ public class AdminPlataformaController {
             if (tipoReporte == null || tipoReporte.trim().isEmpty()) {
                 throw new UnknownResourceException("Debe indicar el tipo de reporte (NORMAL o CADENA) al subir un template.");
             }
+            if (codCategoria == null || codCategoria.trim().isEmpty()) {
+                throw new UnknownResourceException("Debe indicar el código de categoría al subir un template.");
+            }
             TipoReporte tipo;
             try {
                 tipo = TipoReporte.valueOf(tipoReporte.trim().toUpperCase());
@@ -209,9 +220,9 @@ public class AdminPlataformaController {
                 throw new UnknownResourceException("Tipo de reporte inválido: " + tipoReporte
                         + ". Valores válidos: NORMAL, CADENA");
             }
-            String nombreArchivo = templateInsService.guardarTemplate(template, codCliente, tipo);
+            String nombreArchivo = templateInsService.guardarTemplate(template, codCliente, codCategoria.trim().toUpperCase(), tipo, sanitizar);
             response.put("template", nombreArchivo + " guardado correctamente");
-            LOGGER.info("Template guardado para cliente: {}", codCliente);
+            LOGGER.info("Template guardado para cliente: {}, categoria: {}", codCliente, codCategoria);
         }
 
         if (hayFiltros) {
@@ -231,6 +242,44 @@ public class AdminPlataformaController {
         response.put("cliente", codCliente.trim().toUpperCase());
         response.put("mensaje", "Archivos base guardados correctamente");
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @GetMapping(value = "/categorias", produces = "application/json")
+    public ResponseEntity<List<CategoriaDTO>> getCategorias(
+            @RequestParam(value = "codCliente", required = false) String codCliente) {
+        LOGGER.info("Listando categorias insights para administracion. codCliente={}", codCliente);
+        List<CategoriaDTO> categorias = categoriaService.findAll(codCliente).stream()
+                .map(CategoriaDTO::from)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(categorias);
+    }
+
+    @GetMapping(value = "/categorias/{id}", produces = "application/json")
+    public ResponseEntity<CategoriaDTO> getCategoria(@PathVariable Long id) {
+        LOGGER.info("Consultando categoria insights: {}", id);
+        return ResponseEntity.ok(CategoriaDTO.from(categoriaService.findById(id)));
+    }
+
+    @PostMapping(value = "/categorias", consumes = "application/json", produces = "application/json")
+    public ResponseEntity<CategoriaDTO> crearCategoria(@RequestBody CategoriaDTO req) {
+        String usuario = SecurityContextHolder.getContext().getAuthentication().getName();
+        LOGGER.info("Usuario '{}' crea categoria insights: {}", usuario, req.getCodigo());
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(CategoriaDTO.from(categoriaService.save(req, usuario)));
+    }
+
+    @PutMapping(value = "/categorias/{id}", consumes = "application/json", produces = "application/json")
+    public ResponseEntity<CategoriaDTO> actualizarCategoria(@PathVariable Long id, @RequestBody CategoriaDTO req) {
+        String usuario = SecurityContextHolder.getContext().getAuthentication().getName();
+        LOGGER.info("Usuario '{}' actualiza categoria insights: {}", usuario, id);
+        return ResponseEntity.ok(CategoriaDTO.from(categoriaService.update(id, req, usuario)));
+    }
+
+    @DeleteMapping(value = "/categorias/{id}", produces = "application/json")
+    public ResponseEntity<CategoriaDTO> eliminarCategoria(@PathVariable Long id) {
+        String usuario = SecurityContextHolder.getContext().getAuthentication().getName();
+        LOGGER.info("Usuario '{}' da de baja categoria insights: {}", usuario, id);
+        return ResponseEntity.ok(CategoriaDTO.from(categoriaService.disable(id, usuario)));
     }
 
     private void validarCsv(MultipartFile archivo, String descripcion) {

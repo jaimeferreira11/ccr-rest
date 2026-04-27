@@ -32,6 +32,10 @@ public class InformeIns implements Serializable {
     private String codCliente;
 
     @NotNull
+    @Column(name = "cod_categoria", nullable = false, length = 50)
+    private String codCategoria;
+
+    @NotNull
     @Enumerated(EnumType.STRING)
     @Column(name = "tipo_reporte", nullable = false, length = 50)
     private TipoReporte tipoReporte;
@@ -76,6 +80,14 @@ public class InformeIns implements Serializable {
 
     public void setCodCliente(String codCliente) {
         this.codCliente = codCliente;
+    }
+
+    public String getCodCategoria() {
+        return codCategoria;
+    }
+
+    public void setCodCategoria(String codCategoria) {
+        this.codCategoria = codCategoria;
     }
 
     public TipoReporte getTipoReporte() {

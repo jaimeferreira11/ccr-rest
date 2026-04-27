@@ -17,7 +17,9 @@ public interface BocasSCJRepository extends JpaRepository<BocaSCJ, Long> {
     List<BocaSCJ> findByActivoTrue();
 
     List<BocaSCJ> findByCodDistribuidorAndActivoTrue(String codDistribuidor);
-    
+
+    List<BocaSCJ> findByAuditorAndActivoTrue(String auditor);
+
     Optional<BocaSCJ> findByCodBoca(String codigo);
 
 }
