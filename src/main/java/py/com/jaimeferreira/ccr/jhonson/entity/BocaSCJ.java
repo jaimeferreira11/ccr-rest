@@ -9,6 +9,7 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.Table;
+import javax.persistence.Transient;
 
 /**
  *
@@ -59,7 +60,9 @@ public class BocaSCJ {
     @Column(name = "fecha_creacion", nullable = false, updatable = false, columnDefinition = "timestamp default now()")
     private LocalDateTime fechaCreacion;
 
-    @Column(name = "auditor", length = 200, nullable = false)
+    /** @deprecated Retrocompatibilidad con app mobile. La relación real es N:M en boca_auditor. */
+    @Deprecated
+    @Transient
     private String auditor;
 
     public Long getId() {
@@ -166,10 +169,14 @@ public class BocaSCJ {
         this.fechaCreacion = fechaCreacion;
     }
 
+    /** @deprecated Usar boca_auditor. Se mantiene para retrocompatibilidad con app mobile. */
+    @Deprecated
     public String getAuditor() {
         return auditor;
     }
 
+    /** @deprecated Usar boca_auditor. Se mantiene para retrocompatibilidad con app mobile. */
+    @Deprecated
     public void setAuditor(String auditor) {
         this.auditor = auditor;
     }

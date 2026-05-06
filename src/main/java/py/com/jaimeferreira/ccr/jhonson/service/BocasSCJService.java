@@ -66,7 +66,9 @@ public class BocasSCJService {
 
     public List<BocaSCJ> findByAuditor(String auditor) {
         LOGGER.info("Buscando bocas del auditor: " + auditor);
-        return repository.findByAuditorAndActivoTrue(auditor);
+        List<BocaSCJ> bocas = repository.findByAuditorAndActivoTrue(auditor);
+        bocas.forEach(b -> b.setAuditor(auditor));
+        return bocas;
     }
 
     public void save(BocaSCJ boca) {
