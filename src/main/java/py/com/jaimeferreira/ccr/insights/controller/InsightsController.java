@@ -110,13 +110,14 @@ public class InsightsController {
             @RequestParam(value = "csvFiltros", required = false) MultipartFile csvFiltros,
             @RequestParam("codCliente") String codCliente,
             @RequestParam("codCategoria") String codCategoria,
-            @RequestParam("tipoReporte") String tipoReporte) {
+            @RequestParam("tipoReporte") String tipoReporte,
+            @RequestParam(value = "mesInicioFiscal", defaultValue = "1") int mesInicioFiscal) {
 
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         String usuario = auth.getName();
 
-        LOGGER.info("Solicitud de generación de informe. Cliente: {}, Categoria: {}, Tipo: {}, Usuario: {}, filtrosAdjuntos: {}",
-                codCliente, codCategoria, tipoReporte, usuario, (csvFiltros != null && !csvFiltros.isEmpty()));
+        LOGGER.info("Solicitud de generación de informe. Cliente: {}, Categoria: {}, Tipo: {}, mesInicioFiscal: {}, Usuario: {}, filtrosAdjuntos: {}",
+                codCliente, codCategoria, tipoReporte, mesInicioFiscal, usuario, (csvFiltros != null && !csvFiltros.isEmpty()));
 
         if (!org.springframework.util.StringUtils.hasText(codCategoria)) {
             throw new UnknownResourceException("El código de categoría es requerido.");
@@ -130,11 +131,15 @@ public class InsightsController {
                     + ". Valores válidos: NORMAL, CADENA");
         }
 
+        if (mesInicioFiscal < 1 || mesInicioFiscal > 12) {
+            throw new UnknownResourceException("mesInicioFiscal debe estar entre 1 y 12. Valor recibido: " + mesInicioFiscal);
+        }
+
         if (csvData.isEmpty()) {
             throw new UnknownResourceException("El archivo CSV de datos no puede estar vacío.");
         }
 
-        InformeIns informe = reporteService.iniciarGeneracion(csvData, csvFiltros, codCliente, codCategoria, tipo, usuario);
+        InformeIns informe = reporteService.iniciarGeneracion(csvData, csvFiltros, codCliente, codCategoria, tipo, mesInicioFiscal, usuario);
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(InformeDTO.from(informe));
     }
 

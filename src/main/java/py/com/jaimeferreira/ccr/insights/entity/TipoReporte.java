@@ -7,11 +7,11 @@ package py.com.jaimeferreira.ccr.insights.entity;
  * NORMAL y CADENA tienen distinta cantidad y orden de columnas:
  *
  * <pre>
- * NORMAL (13 cols): Categoría | Apertura | Empresa | Marca | Segmento | Mes | Año |
- *                   Dist.Física | Dist.Ponderada | Facturación | Precio | Volumen | Vol.Unidades
+ * NORMAL (13 cols, +1 opcional): Categoría | Apertura | Empresa | Marca | Segmento | Mes | Año |
+ *                   Dist.Física | Dist.Ponderada | Facturación | Precio | Volumen | Vol.Unidades [| SUB_MARCA]
  *
- * CADENA (14 cols): Categoría | Apertura Geográfica | Empresa | Marca | Variedad | Segmento |
- *                   Dist.Física | Dist.Ponderada | Mes | Año | Facturación | Precio | Volumen | Vol.Unidades
+ * CADENA (14 cols, +1 opcional): Categoría | Apertura Geográfica | Empresa | Marca | Variedad | Segmento |
+ *                   Dist.Física | Dist.Ponderada | Mes | Año | Facturación | Precio | Volumen | Vol.Unidades [| SUB_MARCA]
  * </pre>
  *
  * @author Jaime Ferreira

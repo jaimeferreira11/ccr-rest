@@ -158,4 +158,12 @@ public class BocaNest {
         this.latitud = latitud;
     }
 
+    public String getCodDistribuidor() {
+        return codDistribuidor;
+    }
+
+    public void setCodDistribuidor(String codDistribuidor) {
+        this.codDistribuidor = codDistribuidor;
+    }
+
 }

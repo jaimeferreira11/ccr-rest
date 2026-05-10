@@ -74,15 +74,14 @@ public class RespuestaCabSCJ implements Serializable {
     @Column(name = "HORA_FIN", length = 20)
     private String horaFin;
 
-    @Column(name = "comentario_sr", length = 500)
-    private String comentarioSR;
+    @Column(name = "comentario_si", length = 500)
+    private String comentarioSI;
 
-    @Column(name = "comentario_ea", length = 500)
-    private String comentarioEA;
+    @Column(name = "comentario_sp", length = 500)
+    private String comentarioSP;
 
-    @Column(name = "comentario_fp", length = 500)
-    private String comentarioFP;
-
+    @Column(name = "comentario_se", length = 500)
+    private String comentarioSE;
 
     @Column(name = "ACTIVO", nullable = false, columnDefinition = "boolean NOT NULL default true")
     private Boolean activo;
@@ -204,28 +203,28 @@ public class RespuestaCabSCJ implements Serializable {
         this.canalCcr = canalCcr;
     }
 
-    public String getComentarioSR() {
-        return comentarioSR;
+    public String getComentarioSI() {
+        return comentarioSI;
     }
 
-    public void setComentarioSR(String comentarioSR) {
-        this.comentarioSR = comentarioSR;
+    public void setComentarioSI(String comentarioSI) {
+        this.comentarioSI = comentarioSI;
     }
 
-    public String getComentarioEA() {
-        return comentarioEA;
+    public String getComentarioSP() {
+        return comentarioSP;
     }
 
-    public void setComentarioEA(String comentarioEA) {
-        this.comentarioEA = comentarioEA;
+    public void setComentarioSP(String comentarioSP) {
+        this.comentarioSP = comentarioSP;
     }
 
-    public String getComentarioFP() {
-        return comentarioFP;
+    public String getComentarioSE() {
+        return comentarioSE;
     }
 
-    public void setComentarioFP(String comentarioFP) {
-        this.comentarioFP = comentarioFP;
+    public void setComentarioSE(String comentarioSE) {
+        this.comentarioSE = comentarioSE;
     }
 
     public List<RespuestaImagenSCJ> getImagenes() {

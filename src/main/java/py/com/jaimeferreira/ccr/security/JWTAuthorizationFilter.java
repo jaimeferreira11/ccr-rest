@@ -57,27 +57,17 @@ public class JWTAuthorizationFilter extends OncePerRequestFilter {
             chain.doFilter(request, response);
         }
         catch (ExpiredJwtException e) {
-            e.printStackTrace();
-            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-            LOGGER.error(response.toString());
-
+            LOGGER.warn("Token expirado: {}", e.getMessage());
             response.sendError(HttpServletResponse.SC_FORBIDDEN, "Token Expirado");
         }
         catch (UnsupportedJwtException e) {
-            e.printStackTrace();
-
-            LOGGER.error(response.toString());
+            LOGGER.error("Token no soportado: {}", e.getMessage());
             response.sendError(HttpServletResponse.SC_FORBIDDEN,
                                "El Token no es soportado por la Aplicacion");
-
         }
         catch (MalformedJwtException e) {
-            e.printStackTrace();
-            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-            LOGGER.error(response.toString());
-
+            LOGGER.error("Token mal formado: {}", e.getMessage());
             response.sendError(HttpServletResponse.SC_FORBIDDEN, "Token mal formado");
-
         }
     }
 

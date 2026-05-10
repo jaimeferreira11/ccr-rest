@@ -6,8 +6,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -29,11 +31,11 @@ import py.com.jaimeferreira.ccr.insights.service.PaisInsService;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
 
 import py.com.jaimeferreira.ccr.commons.exception.UnknownResourceException;
+import py.com.jaimeferreira.ccr.insights.admin.service.LogStreamService;
 import py.com.jaimeferreira.ccr.insights.entity.TipoReporte;
 import py.com.jaimeferreira.ccr.insights.service.ReporteInsService;
 import py.com.jaimeferreira.ccr.insights.service.TemplateInsService;
@@ -67,6 +69,9 @@ public class AdminPlataformaController {
 
     @Autowired
     private CategoriaService categoriaService;
+
+    @Autowired
+    private LogStreamService logStreamService;
 
     /** Retorna el estado actual de la plataforma. */
     @GetMapping(value = "/plataforma", produces = "application/json")
@@ -244,6 +249,41 @@ public class AdminPlataformaController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
+    /**
+     * Elimina el archivo datos_base de un cliente para un tipo de reporte.
+     *
+     * @param codCliente  código del cliente (path)
+     * @param tipoReporte NORMAL o CADENA
+     */
+    @DeleteMapping(value = "/clientes/{codCliente}/archivos-base", produces = "application/json")
+    public ResponseEntity<Map<String, String>> eliminarArchivosBase(
+            @PathVariable String codCliente,
+            @RequestParam("tipoReporte") String tipoReporte) {
+
+        String usuario = SecurityContextHolder.getContext().getAuthentication().getName();
+        String codClienteNorm = codCliente.trim().toUpperCase();
+        LOGGER.info("Usuario '{}' solicita eliminar datos base del cliente: {}, tipoReporte: {}",
+                    usuario, codClienteNorm, tipoReporte);
+
+        clienteInsService.findByCodigo(codClienteNorm);
+
+        TipoReporte tipo;
+        try {
+            tipo = TipoReporte.valueOf(tipoReporte.trim().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new UnknownResourceException("Tipo de reporte inválido: " + tipoReporte
+                    + ". Valores válidos: NORMAL, CADENA");
+        }
+
+        String resultado = reporteInsService.eliminarDatosBase(codClienteNorm, tipo);
+
+        Map<String, String> response = new HashMap<>();
+        response.put("cliente", codClienteNorm);
+        response.put("mensaje", "Archivos eliminados correctamente");
+        response.put("detalle", resultado);
+        return ResponseEntity.ok(response);
+    }
+
     @GetMapping(value = "/categorias", produces = "application/json")
     public ResponseEntity<List<CategoriaDTO>> getCategorias(
             @RequestParam(value = "codCliente", required = false) String codCliente) {
@@ -280,6 +320,18 @@ public class AdminPlataformaController {
         String usuario = SecurityContextHolder.getContext().getAuthentication().getName();
         LOGGER.info("Usuario '{}' da de baja categoria insights: {}", usuario, id);
         return ResponseEntity.ok(CategoriaDTO.from(categoriaService.disable(id, usuario)));
+    }
+
+    /**
+     * Stream SSE de logs en tiempo real (tail -f).
+     * El cliente recibe un evento "initial" con las últimas 100 líneas,
+     * y luego eventos "log" con cada bloque nuevo que se escribe al archivo.
+     */
+    @GetMapping(value = "/logs/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter streamLogs() {
+        String usuario = SecurityContextHolder.getContext().getAuthentication().getName();
+        LOGGER.info("Usuario '{}' se conecta al stream de logs", usuario);
+        return logStreamService.subscribe();
     }
 
     private void validarCsv(MultipartFile archivo, String descripcion) {

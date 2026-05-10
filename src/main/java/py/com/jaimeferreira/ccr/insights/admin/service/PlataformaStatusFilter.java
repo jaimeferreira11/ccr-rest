@@ -35,7 +35,8 @@ public class PlataformaStatusFilter extends OncePerRequestFilter {
         String path = request.getRequestURI();
         // Excluir login, rutas públicas y el endpoint de administración de la plataforma
         return path.contains("/auth/") || path.contains("/public/")
-                || path.contains("/insights/api/v1/admin/plataforma");
+                || path.contains("/insights/api/v1/admin/plataforma")
+                || path.contains("/api/v1/admin/");
     }
 
     @Override

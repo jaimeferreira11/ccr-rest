@@ -85,6 +85,8 @@ public class ReporteInsService {
     private static final String SHEET_FACT = "FACT";
     private static final String SHEET_TOTAL_EMPRESA = "Total Empresa";
     private static final String SHEET_CALENDARIO = "Calendario";
+    private static final String SHEET_DIM = "DIM";
+    private static final String SHEET_HOJA1 = "Hoja 1";
 
     // Nombres de meses en español para la hoja Calendario
     private static final String[] MESES_ES = {
@@ -107,6 +109,15 @@ public class ReporteInsService {
 
     @Value("${path.directory.server}")
     private String directorioServer;
+
+    @Value("${reporte.refresh.script.path:scripts/refresh-excel.vbs}")
+    private String refreshScriptPath;
+
+    @Value("${reporte.refresh.timeout.seconds:120}")
+    private int refreshTimeoutSeconds;
+
+    @Value("${reporte.refresh.enabled:true}")
+    private boolean refreshEnabled;
 
     @Value("${path.directory.server_path_reports_insights}")
     private String insightsReportsSubdir;
@@ -145,10 +156,10 @@ public class ReporteInsService {
      */
     public InformeIns iniciarGeneracion(MultipartFile csvData, MultipartFile csvFiltros,
                                         String codCliente, String codCategoria, TipoReporte tipoReporte,
-                                        String usuario) {
+                                        int mesInicioFiscal, String usuario) {
 
-        LOGGER.info("Iniciando generación de informe. Cliente: {}, Tipo: {}, Categoría: {}", codCliente, tipoReporte,
-                    codCategoria);
+        LOGGER.info("Iniciando generación de informe. Cliente: {}, Tipo: {}, Categoría: {}, mesInicioFiscal: {}",
+                    codCliente, tipoReporte, codCategoria, mesInicioFiscal);
         LOGGER.info("  csvData: nombre='{}', tamaño={} bytes", csvData.getOriginalFilename(), csvData.getSize());
         LOGGER.info("  csvFiltros: {}", csvFiltros != null && !csvFiltros.isEmpty()
                                                                                     ? "nombre='"
@@ -183,7 +194,7 @@ public class ReporteInsService {
 
         InformeIns guardado = informeService.save(informe);
 
-        self.procesarReporte(guardado.getId(), csvBytes, filtroBytes, codCliente, codCategoria, tipoReporte, usuario);
+        self.procesarReporte(guardado.getId(), csvBytes, filtroBytes, codCliente, codCategoria, tipoReporte, mesInicioFiscal, usuario);
 
         return guardado;
     }
@@ -222,7 +233,8 @@ public class ReporteInsService {
      */
     @Async
     public void procesarReporte(Long informeId, byte[] csvBytes, byte[] filtroBytes,
-                                String codCliente, String codCategoria, TipoReporte tipoReporte, String usuario) {
+                                String codCliente, String codCategoria, TipoReporte tipoReporte,
+                                int mesInicioFiscal, String usuario) {
 
         LOGGER.info("Procesando informe id={} de forma asíncrona", informeId);
 
@@ -260,6 +272,14 @@ public class ReporteInsService {
             int totalDataRows = dataFiltrada.size() - 1; // sin header
             LOGGER.info("Filas resultantes tras filtrado: {}", totalDataRows);
 
+            // Detectar columna opcional SUB_MARCA en el CSV de datos
+            int idxSubMarca = detectarColumnaSubMarca(dataFiltrada.get(0));
+            if (idxSubMarca >= 0) {
+                LOGGER.info("Columna SUB_MARCA detectada en índice {}", idxSubMarca);
+            } else {
+                LOGGER.info("Columna SUB_MARCA no presente en el CSV");
+            }
+
             if (totalDataRows <= 0) {
                 throw new RuntimeException(
                                            "El CSV de datos no contiene filas que coincidan con los filtros aplicados. "
@@ -286,18 +306,24 @@ public class ReporteInsService {
             CellStyle dateCellStyle = workbook.createCellStyle();
             dateCellStyle.setDataFormat(workbook.createDataFormat().getFormat("yyyy-mm-dd"));
 
-            poblarFact(workbook, dataFiltrada, codClienteNorm, clienteLabel, pais, dateCellStyle, tipoReporte, ordenAperturaMap, agrupadorSegmentoMap);
-            poblarTotalEmpresa(workbook, dataFiltrada, codClienteNorm, clienteLabel, pais, dateCellStyle, tipoReporte, ordenAperturaMap, agrupadorSegmentoMap);
-            actualizarRangosTablas(templateWb, totalDataRows, calendarRows, tipoReporte);
+            poblarFact(workbook, dataFiltrada, codClienteNorm, clienteLabel, pais, dateCellStyle, tipoReporte, ordenAperturaMap, agrupadorSegmentoMap, idxSubMarca, mesInicioFiscal);
+            poblarTotalEmpresa(workbook, dataFiltrada, codClienteNorm, clienteLabel, pais, dateCellStyle, tipoReporte, ordenAperturaMap, agrupadorSegmentoMap, idxSubMarca, mesInicioFiscal);
+            actualizarRangosTablas(templateWb, totalDataRows, calendarRows, tipoReporte, idxSubMarca >= 0);
             refrescarTablasDinamicas(templateWb);
             ocultarHoja(workbook, SHEET_FACT);
             ocultarHoja(workbook, SHEET_CALENDARIO);
             ocultarHoja(workbook, SHEET_TOTAL_EMPRESA);
+            ocultarHoja(workbook, SHEET_DIM);
+            ocultarHoja(workbook, SHEET_HOJA1);
             workbook.setForceFormulaRecalculation(true);
 
             String nombreArchivo = buildNombreArchivo(codClienteNorm, tipoReporte);
             String rutaCompleta = guardarEnDisco(workbook, nombreArchivo);
             workbook.dispose();
+
+            // POST-PROCESAMIENTO: Refrescar modelo de datos con Excel real (COM)
+            // Esto reconstruye el VertiPaq para que las medidas DAX funcionen con los nuevos datos
+            refrescarModeloDatos(rutaCompleta);
 
             // Persistir el CSV concatenado como nuevo datos_base del cliente
             guardarDatosBase(codClienteNorm, tipoReporte, csvConcatenado);
@@ -329,7 +355,8 @@ public class ReporteInsService {
                             String codCliente, String clienteLabel, String pais,
                             CellStyle dateCellStyle, TipoReporte tipoReporte,
                             Map<String, String> ordenAperturaMap,
-                            Map<String, String> agrupadorSegmentoMap) {
+                            Map<String, String> agrupadorSegmentoMap,
+                            int idxSubMarca, int mesInicioFiscal) {
 
         Sheet sheet = workbook.getSheet(SHEET_FACT);
         if (sheet == null) {
@@ -363,10 +390,17 @@ public class ReporteInsService {
                     derivarAgrupadorSegmento(csv[tipoReporte.getIdxSegmento()])));
             setCellString(row, 14, ordenAperturaMap.getOrDefault(
                     normalizar(csv[tipoReporte.getIdxApertura()]), "0"));
-            setCellString(row, 15, derivarYtd(csv[tipoReporte.getIdxMes()]));
+            setCellString(row, 15, derivarYtd(csv[tipoReporte.getIdxMes()], mesInicioFiscal));
             setCellDate(row, 16, csv[tipoReporte.getIdxMes()], csv[tipoReporte.getIdxAno()], dateCellStyle);
+            int nextCol = 17;
             if (tipoReporte.tieneExtra()) {
-                setCellString(row, 17, csv[tipoReporte.getIdxExtra()]);
+                setCellString(row, nextCol, csv[tipoReporte.getIdxExtra()]);
+                nextCol++;
+            }
+            if (idxSubMarca >= 0 && idxSubMarca < csv.length) {
+                setCellString(row, nextCol, csv[idxSubMarca]);
+            } else if (idxSubMarca >= 0) {
+                setCellString(row, nextCol, "");
             }
         }
 
@@ -383,7 +417,8 @@ public class ReporteInsService {
                                     String codCliente, String clienteLabel, String pais,
                                     CellStyle dateCellStyle, TipoReporte tipoReporte,
                                     Map<String, String> ordenAperturaMap,
-                                    Map<String, String> agrupadorSegmentoMap) {
+                                    Map<String, String> agrupadorSegmentoMap,
+                                    int idxSubMarca, int mesInicioFiscal) {
 
         Sheet sheet = workbook.getSheet(SHEET_TOTAL_EMPRESA);
         if (sheet == null) {
@@ -412,13 +447,20 @@ public class ReporteInsService {
                     normalizar(csv[tipoReporte.getIdxSegmento()]),
                     derivarAgrupadorSegmento(csv[tipoReporte.getIdxSegmento()])));
             setCellNumeric(row, 10, csv[tipoReporte.getIdxVolumenUnidades()]);
-            setCellString(row, 11, derivarYtd(csv[tipoReporte.getIdxMes()]));
+            setCellString(row, 11, derivarYtd(csv[tipoReporte.getIdxMes()], mesInicioFiscal));
             setCellString(row, 12, ordenAperturaMap.getOrDefault(
                     normalizar(csv[tipoReporte.getIdxApertura()]), "0"));
             setCellDate(row, 13, csv[tipoReporte.getIdxMes()], csv[tipoReporte.getIdxAno()], dateCellStyle);
             setCellString(row, 14, csv[tipoReporte.getIdxMarca()]);
+            int nextCol = 15;
             if (tipoReporte.tieneExtra()) {
-                setCellString(row, 15, csv[tipoReporte.getIdxExtra()]);
+                setCellString(row, nextCol, csv[tipoReporte.getIdxExtra()]);
+                nextCol++;
+            }
+            if (idxSubMarca >= 0 && idxSubMarca < csv.length) {
+                setCellString(row, nextCol, csv[idxSubMarca]);
+            } else if (idxSubMarca >= 0) {
+                setCellString(row, nextCol, "");
             }
         }
 
@@ -578,16 +620,26 @@ public class ReporteInsService {
      * 2. PivotCacheDefinition: refreshOnLoad=true → Excel reconstruye el cache
      *    desde el rango de datos fuente (FACT, Total Empresa, etc.).
      */
+    /**
+     * Marca todas las tablas dinámicas y sus caches para que Excel reconstruya
+     * los datos al abrir el archivo, en lugar de usar el cache del template.
+     *
+     * Se actúa en dos niveles:
+     * 1. PivotCacheDefinition: refreshOnLoad=true -> Excel reconstruye el cache
+     *    desde el rango de datos fuente (FACT, Total Empresa, etc.).
+     * 2. Workbook: forceFormulaRecalculation=true -> Excel recalcula fórmulas.
+     *
+     * Nota: Esto funciona para pivot caches basados en rangos de celdas.
+     * Para el modelo de datos VertiPaq (medidas DAX), se requiere además
+     * el post-procesamiento con refrescarModeloDatos() que usa Excel COM.
+     */
     private void refrescarTablasDinamicas(XSSFWorkbook wb) {
-        // CTPivotTableDefinition no expone setRefreshOnLoad; el refresh se controla
-        // desde el PivotCacheDefinition, por eso solo se marca allí (ver abajo).
         int ptCount = 0;
         for (int i = 0; i < wb.getNumberOfSheets(); i++) {
             ptCount += wb.getSheetAt(i).getPivotTables().size();
         }
 
-        // Marcar los pivot caches a nivel del workbook para que Excel reconstruya
-        // el cache al abrir el archivo.
+        // Buscar pivot caches en relaciones directas del workbook
         int cacheCount = 0;
         for (org.apache.poi.ooxml.POIXMLDocumentPart part : wb.getRelations()) {
             if (part instanceof org.apache.poi.xssf.usermodel.XSSFPivotCacheDefinition) {
@@ -598,14 +650,110 @@ public class ReporteInsService {
             }
         }
 
-        LOGGER.info("Tablas dinámicas: {} pivot tables y {} pivot caches marcados para refresco al abrir.",
+        // Fallback: buscar recursivamente en partes hijas si no se encontraron en nivel directo
+        if (cacheCount == 0) {
+            for (org.apache.poi.ooxml.POIXMLDocumentPart part : wb.getRelations()) {
+                for (org.apache.poi.ooxml.POIXMLDocumentPart child : part.getRelations()) {
+                    if (child instanceof org.apache.poi.xssf.usermodel.XSSFPivotCacheDefinition) {
+                        org.apache.poi.xssf.usermodel.XSSFPivotCacheDefinition cacheDef =
+                                (org.apache.poi.xssf.usermodel.XSSFPivotCacheDefinition) child;
+                        cacheDef.getCTPivotCacheDefinition().setRefreshOnLoad(true);
+                        cacheCount++;
+                    }
+                }
+            }
+        }
+
+        // Forzar recálculo global de fórmulas
+        wb.setForceFormulaRecalculation(true);
+
+        LOGGER.info("Pivot tables: {} encontradas, {} pivot caches marcados refreshOnLoad=true",
                     ptCount, cacheCount);
     }
 
+    /**
+     * Post-procesa el Excel generado invocando PowerShell + COM de Excel
+     * para forzar RefreshAll y reconstruir el modelo de datos VertiPaq.
+     *
+     * Esto es necesario porque Apache POI no puede manipular el modelo de datos
+     * binario (xl/model/item.data) que contiene las medidas DAX.
+     * Sin este paso, medidas como M_YTD MODELO y M_MAESTRA_ACUM fallan
+     * con error de dependencia al usar filtros/slicers.
+     *
+     * @param rutaExcel ruta absoluta al archivo .xlsx generado
+     */
+    private void refrescarModeloDatos(String rutaExcel) {
+        if (!refreshEnabled) {
+            LOGGER.info("Refresh del modelo de datos deshabilitado (reporte.refresh.enabled=false)");
+            return;
+        }
+
+        LOGGER.info("Iniciando refresh del modelo de datos para: {}", rutaExcel);
+        long inicio = System.currentTimeMillis();
+
+        try {
+            // VBScript + cscript.exe en lugar de PowerShell: VBS corre nativamente
+            // en STA (Single-Threaded Apartment), evitando el error COM
+            // "No se puede obtener la propiedad Open de la clase Workbooks"
+            // que ocurre con PowerShell desde procesos de servicio.
+            ProcessBuilder pb = new ProcessBuilder(
+                "cscript.exe",
+                "//Nologo",
+                "//B",
+                refreshScriptPath,
+                rutaExcel
+            );
+            pb.redirectErrorStream(true);
+
+            Process process = pb.start();
+
+            // Leer output del proceso
+            String output;
+            try (java.io.BufferedReader reader = new java.io.BufferedReader(
+                    new java.io.InputStreamReader(process.getInputStream()))) {
+                output = reader.lines()
+                              .collect(java.util.stream.Collectors.joining("\n"));
+            }
+
+            // Timeout configurable (el refresh del modelo puede tardar con datasets grandes)
+            boolean finished = process.waitFor(refreshTimeoutSeconds, java.util.concurrent.TimeUnit.SECONDS);
+
+            if (!finished) {
+                process.destroyForcibly();
+                LOGGER.error("Timeout al refrescar modelo de datos Excel: {}", rutaExcel);
+                // NO lanzar excepción - el archivo sigue siendo utilizable,
+                // solo que el usuario tendrá que hacer RefreshAll manualmente
+                return;
+            }
+
+            if (process.exitValue() != 0) {
+                LOGGER.error("Error al refrescar modelo de datos (exit={}): {}",
+                            process.exitValue(), output);
+                // NO lanzar excepción - mismo motivo que arriba
+                return;
+            }
+
+            long duracion = (System.currentTimeMillis() - inicio) / 1000;
+            LOGGER.info("Modelo de datos refrescado en {}s. Output: {}", duracion, output.trim());
+
+        } catch (Exception e) {
+            LOGGER.error("Excepción al refrescar modelo de datos: {}", e.getMessage(), e);
+            // NO propagar - el reporte se generó correctamente,
+            // el refresh es un paso de mejora, no crítico
+        }
+    }
+
     private void actualizarRangosTablas(XSSFWorkbook templateWb, int dataRows, int calendarRows,
-                                        TipoReporte tipoReporte) {
-        String lastColFact = tipoReporte == TipoReporte.CADENA ? "R" : "Q";
-        String lastColTotalEmpresa = tipoReporte == TipoReporte.CADENA ? "P" : "O";
+                                        TipoReporte tipoReporte, boolean tieneSubMarca) {
+        String lastColFact;
+        String lastColTotalEmpresa;
+        if (tieneSubMarca) {
+            lastColFact = tipoReporte == TipoReporte.CADENA ? "S" : "R";
+            lastColTotalEmpresa = tipoReporte == TipoReporte.CADENA ? "Q" : "P";
+        } else {
+            lastColFact = tipoReporte == TipoReporte.CADENA ? "R" : "Q";
+            lastColTotalEmpresa = tipoReporte == TipoReporte.CADENA ? "P" : "O";
+        }
         actualizarTabla(templateWb, SHEET_FACT, "FACT", dataRows, lastColFact);
         actualizarTabla(templateWb, SHEET_TOTAL_EMPRESA, "Total_Empresa", dataRows, lastColTotalEmpresa);
         actualizarTabla(templateWb, SHEET_CALENDARIO, "Calendario", calendarRows, "D");
@@ -643,7 +791,7 @@ public class ReporteInsService {
     private static final String FILTROS_BASE_FILENAME = "filtros_base.csv";
 
     /** Genera el nombre de archivo de datos base según el tipo de reporte: datos_base_normal.csv / datos_base_cadena.csv */
-    private static String datosBaseFilename(TipoReporte tipo) {
+    public static String datosBaseFilename(TipoReporte tipo) {
         return "datos_base_" + tipo.name().toLowerCase() + ".csv";
     }
 
@@ -777,6 +925,31 @@ public class ReporteInsService {
         }
         catch (IOException e) {
             throw new RuntimeException("Error al guardar archivo base: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Elimina el archivo datos_base del cliente para el tipo de reporte indicado.
+     *
+     * @param codCliente  código del cliente
+     * @param tipoReporte tipo de reporte (para resolver datos_base_normal.csv o datos_base_cadena.csv)
+     * @return mensaje indicando si se eliminó o no existía
+     */
+    public String eliminarDatosBase(String codCliente, TipoReporte tipoReporte) {
+        String nombreArchivo = datosBaseFilename(tipoReporte);
+        File archivo = Paths.get(getClienteDir(codCliente), nombreArchivo).toFile();
+
+        if (archivo.exists()) {
+            if (archivo.delete()) {
+                LOGGER.info("Archivo eliminado: {}", archivo.getAbsolutePath());
+                return nombreArchivo + " eliminado";
+            } else {
+                LOGGER.error("No se pudo eliminar el archivo: {}", archivo.getAbsolutePath());
+                return nombreArchivo + ": error al eliminar";
+            }
+        } else {
+            LOGGER.info("Archivo no existe, nada que eliminar: {}", archivo.getAbsolutePath());
+            return nombreArchivo + " no existía";
         }
     }
 
@@ -1145,9 +1318,25 @@ public class ReporteInsService {
         return "TOT.PROD.".equalsIgnoreCase(segmento.trim()) ? "TOT.PROD." : "POR TIPO";
     }
 
-    /** YTD 1er Mes: "1" si es enero, vacío en caso contrario. */
-    private String derivarYtd(String mes) {
-        return "1".equals(mes != null ? mes.trim() : "") ? "1" : "";
+    /**
+     * Busca la columna SUB_MARCA en los headers del CSV de datos (case-insensitive).
+     *
+     * @param headers array de nombres de columna del CSV
+     * @return índice de la columna SUB_MARCA, o -1 si no existe
+     */
+    private int detectarColumnaSubMarca(String[] headers) {
+        String target = normalizar("SUB_MARCA");
+        for (int i = 0; i < headers.length; i++) {
+            if (target.equals(normalizar(headers[i]))) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    /** YTD 1er Mes: "1" si el mes coincide con el inicio del año fiscal, vacío en caso contrario. */
+    private String derivarYtd(String mes, int mesInicioFiscal) {
+        return String.valueOf(mesInicioFiscal).equals(mes != null ? mes.trim() : "") ? "1" : "";
     }
 
     // -------------------------------------------------------------------------

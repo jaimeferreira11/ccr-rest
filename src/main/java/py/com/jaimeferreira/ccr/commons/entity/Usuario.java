@@ -41,6 +41,10 @@ public class Usuario {
     @Column(name = "COD_CLIENTE")
     private String codCliente;
 
+    @NotNull
+    @Column(name = "EXTERNO", nullable = false, columnDefinition = "BOOLEAN DEFAULT FALSE")
+    private Boolean externo = false;
+
     // Getters and Setters
 
     public Long getId() {
@@ -90,6 +94,13 @@ public class Usuario {
     public void setCodCliente(String codCliente) {
         this.codCliente = codCliente;
     }
-    
-    
+
+    public Boolean getExterno() {
+        return externo;
+    }
+
+    public void setExterno(Boolean externo) {
+        this.externo = externo;
+    }
+
 }
