@@ -28,7 +28,9 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import py.com.jaimeferreira.ccr.commons.entity.Cotizacion;
 import py.com.jaimeferreira.ccr.commons.exception.UnknownResourceException;
+import py.com.jaimeferreira.ccr.commons.service.CotizacionService;
 import py.com.jaimeferreira.ccr.insights.entity.ClienteIns;
 import py.com.jaimeferreira.ccr.insights.entity.EstadoInforme;
 import py.com.jaimeferreira.ccr.insights.entity.InformeIns;
@@ -87,6 +89,10 @@ public class ReporteInsService {
     private static final String SHEET_CALENDARIO = "Calendario";
     private static final String SHEET_DIM = "DIM";
     private static final String SHEET_HOJA1 = "Hoja 1";
+    private static final String SHEET_INICIO = "INICIO";
+
+    // Nombre definido para el mes de inicio fiscal (referenciado por fórmulas en Calendario)
+    private static final String NAMED_RANGE_MES_INICIO_FISCAL = "MesInicioFiscal";
 
     // Nombres de meses en español para la hoja Calendario
     private static final String[] MESES_ES = {
@@ -133,6 +139,9 @@ public class ReporteInsService {
 
     @Autowired
     private TemplateInsService templateService;
+
+    @Autowired
+    private CotizacionService cotizacionService;
 
     /**
      * Self-reference para que @Async funcione a través del proxy de Spring (evita self-invocation).
@@ -294,11 +303,12 @@ public class ReporteInsService {
             templateStream.close();
 
             desconectarTablas(templateWb);
+            escribirMesInicioFiscal(templateWb, mesInicioFiscal);
 
             limpiarDatosHoja(templateWb, SHEET_FACT);
             limpiarDatosHoja(templateWb, SHEET_TOTAL_EMPRESA);
 
-            int calendarRows = poblarCalendario(templateWb, dataFiltrada, tipoReporte);
+            int calendarRows = poblarCalendario(templateWb, dataFiltrada, tipoReporte, mesInicioFiscal);
 
             SXSSFWorkbook workbook = new SXSSFWorkbook(templateWb, 100);
             workbook.setCompressTempFiles(true);
@@ -468,17 +478,95 @@ public class ReporteInsService {
     }
 
     /**
+     * Escribe el mes de inicio fiscal en la hoja INICIO (celda B4) y crea/verifica
+     * el nombre definido MesInicioFiscal → INICIO!$B$4.
+     * Las fórmulas de la columna "Año Fiscal" en Calendario referencian este nombre.
+     */
+    private void escribirMesInicioFiscal(XSSFWorkbook wb, int mesInicioFiscal) {
+        XSSFSheet sheet = wb.getSheet(SHEET_INICIO);
+        if (sheet == null) {
+            LOGGER.warn("Hoja '{}' no encontrada en el template, se crea nueva.", SHEET_INICIO);
+            sheet = wb.createSheet(SHEET_INICIO);
+        }
+
+        // Escribir etiqueta en A4 y valor en B4
+        org.apache.poi.xssf.usermodel.XSSFRow row = sheet.getRow(3);
+        if (row == null) row = sheet.createRow(3);
+
+        Cell labelCell = row.getCell(0, Row.MissingCellPolicy.CREATE_NULL_AS_BLANK);
+        labelCell.setCellValue("Mes Inicio Fiscal");
+
+        Cell valueCell = row.getCell(1, Row.MissingCellPolicy.CREATE_NULL_AS_BLANK);
+        valueCell.setCellValue(mesInicioFiscal);
+
+        // Crear/verificar nombre definido a nivel workbook
+        org.apache.poi.ss.usermodel.Name existing = wb.getName(NAMED_RANGE_MES_INICIO_FISCAL);
+        if (existing == null) {
+            org.apache.poi.ss.usermodel.Name name = wb.createName();
+            name.setNameName(NAMED_RANGE_MES_INICIO_FISCAL);
+            name.setRefersToFormula(SHEET_INICIO + "!$B$4");
+            LOGGER.info("Nombre definido '{}' creado → {}!$B$4", NAMED_RANGE_MES_INICIO_FISCAL, SHEET_INICIO);
+        } else {
+            LOGGER.info("Nombre definido '{}' ya existe, apunta a: {}", NAMED_RANGE_MES_INICIO_FISCAL, existing.getRefersToFormula());
+        }
+
+        LOGGER.info("Mes inicio fiscal escrito en {}!B4: {}", SHEET_INICIO, mesInicioFiscal);
+    }
+
+    /**
      * Pobla la hoja Calendario directamente sobre el XSSFWorkbook (antes de SXSSF).
      * Extrae los pares (Año, Mes) únicos del CSV de datos y genera una fila por cada uno.
-     * Columnas: Fecha (date 1ro del mes), Mes Numero (int), Año (int), Mes (nombre en español).
+     * Columnas: Fecha (date 1ro del mes), Mes Numero (int), Año (int), Mes (nombre en español),
+     * Año Fiscal (fórmula que referencia MesInicioFiscal).
      *
      * @return cantidad de filas de datos escritas (sin header)
      */
-    private int poblarCalendario(XSSFWorkbook wb, List<String[]> data, TipoReporte tipoReporte) {
+    private int poblarCalendario(XSSFWorkbook wb, List<String[]> data, TipoReporte tipoReporte,
+                                 int mesInicioFiscal) {
         XSSFSheet sheet = wb.getSheet(SHEET_CALENDARIO);
         if (sheet == null) {
             LOGGER.warn("Hoja '{}' no encontrada en el template, se omite.", SHEET_CALENDARIO);
             return 0;
+        }
+
+        // Agregar headers en columnas E y F si no existen
+        org.apache.poi.xssf.usermodel.XSSFRow headerRow = sheet.getRow(0);
+        if (headerRow == null) headerRow = sheet.createRow(0);
+        Cell headerAnoFiscal = headerRow.getCell(4, Row.MissingCellPolicy.CREATE_NULL_AS_BLANK);
+        headerAnoFiscal.setCellValue("Año Fiscal");
+        Cell headerCotizacion = headerRow.getCell(5, Row.MissingCellPolicy.CREATE_NULL_AS_BLANK);
+        headerCotizacion.setCellValue("Cotización USD");
+
+        // Agregar tableColumns "Año Fiscal" y "Cotización USD" a la tabla Calendario si no existen
+        for (XSSFTable table : sheet.getTables()) {
+            if ("Calendario".equals(table.getName())) {
+                // Año Fiscal
+                boolean existeAnoFiscal = false;
+                boolean existeCotizacion = false;
+                for (org.openxmlformats.schemas.spreadsheetml.x2006.main.CTTableColumn col : table.getCTTable().getTableColumns().getTableColumnArray()) {
+                    if ("Año Fiscal".equals(col.getName())) existeAnoFiscal = true;
+                    if ("Cotización USD".equals(col.getName())) existeCotizacion = true;
+                }
+                if (!existeAnoFiscal) {
+                    org.openxmlformats.schemas.spreadsheetml.x2006.main.CTTableColumn newCol = table.getCTTable().getTableColumns().addNewTableColumn();
+                    newCol.setId(5);
+                    newCol.setName("Año Fiscal");
+                    newCol.addNewCalculatedColumnFormula().setStringValue(
+                        "[@Año]+IF(AND(MesInicioFiscal>1,[@[Mes Numero]]>=MesInicioFiscal),1,0)");
+                    long count = table.getCTTable().getTableColumns().getCount();
+                    table.getCTTable().getTableColumns().setCount(count + 1);
+                    LOGGER.info("Columna 'Año Fiscal' agregada a tabla Calendario.");
+                }
+                if (!existeCotizacion) {
+                    org.openxmlformats.schemas.spreadsheetml.x2006.main.CTTableColumn newCol = table.getCTTable().getTableColumns().addNewTableColumn();
+                    newCol.setId(6);
+                    newCol.setName("Cotización USD");
+                    long count = table.getCTTable().getTableColumns().getCount();
+                    table.getCTTable().getTableColumns().setCount(count + 1);
+                    LOGGER.info("Columna 'Cotización USD' agregada a tabla Calendario.");
+                }
+                break;
+            }
         }
 
         // Limpiar filas de datos previas (preservar header)
@@ -507,6 +595,9 @@ public class ReporteInsService {
         CellStyle dateCellStyle = wb.createCellStyle();
         dateCellStyle.setDataFormat(wb.createDataFormat().getFormat("yyyy-mm-dd"));
 
+        // Fórmula para Año Fiscal: referencia estructurada que usa el nombre definido MesInicioFiscal
+        String formulaAnoFiscal = "[@Año]+IF(AND(MesInicioFiscal>1,[@[Mes Numero]]>=MesInicioFiscal),1,0)";
+
         int rowNum = 1;
         for (Map.Entry<Integer, TreeSet<Integer>> entry : anioMeses.entrySet()) {
             int anio = entry.getKey();
@@ -522,6 +613,20 @@ public class ReporteInsService {
                 row.createCell(1, CellType.NUMERIC).setCellValue(mes);
                 row.createCell(2, CellType.NUMERIC).setCellValue(anio);
                 row.createCell(3, CellType.STRING).setCellValue(MESES_ES[mes - 1]);
+
+                // Columna E: Año Fiscal (fórmula)
+                Cell cellAnoFiscal = row.createCell(4);
+                cellAnoFiscal.setCellFormula(formulaAnoFiscal);
+
+                // Columna F: Cotización USD (último día hábil del mes)
+                LocalDate ultimoDiaMes = fecha.withDayOfMonth(fecha.lengthOfMonth());
+                java.util.Optional<Cotizacion> cotizacion = cotizacionService.obtenerCotizacion("USD", ultimoDiaMes);
+                if (cotizacion.isPresent()) {
+                    row.createCell(5, CellType.NUMERIC).setCellValue(cotizacion.get().getValor().doubleValue());
+                } else {
+                    row.createCell(5, CellType.BLANK);
+                    LOGGER.warn("Sin cotización USD para {}-{}, celda en blanco.", anio, mes);
+                }
 
                 rowNum++;
             }
@@ -756,7 +861,7 @@ public class ReporteInsService {
         }
         actualizarTabla(templateWb, SHEET_FACT, "FACT", dataRows, lastColFact);
         actualizarTabla(templateWb, SHEET_TOTAL_EMPRESA, "Total_Empresa", dataRows, lastColTotalEmpresa);
-        actualizarTabla(templateWb, SHEET_CALENDARIO, "Calendario", calendarRows, "D");
+        actualizarTabla(templateWb, SHEET_CALENDARIO, "Calendario", calendarRows, "F");
     }
 
     private void actualizarTabla(XSSFWorkbook wb, String sheetName, String tableName,
