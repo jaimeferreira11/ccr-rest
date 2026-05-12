@@ -1,5 +1,7 @@
 package py.com.jaimeferreira.ccr.commons.controller;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -78,9 +80,7 @@ public class AdminImagenesController {
 
         // armar urlPublica con cache-buster
         long cb = System.currentTimeMillis();
-        resultado.forEach(dto -> dto.setUrlPublica(
-                "/api/v1/admin/imagenes/binario?brand=" + brandLower
-                + "&path=" + dto.getPathRelativo() + "&v=" + cb));
+        resultado.forEach(dto -> dto.setUrlPublica(buildUrlBinario(brandLower, dto.getPathRelativo(), cb)));
 
         return ResponseEntity.ok(resultado);
     }
@@ -123,9 +123,14 @@ public class AdminImagenesController {
         long cb = System.currentTimeMillis();
         Map<String, String> resp = new HashMap<>();
         resp.put("path", path);
-        resp.put("urlPublica", "/api/v1/admin/imagenes/binario?brand=" + brand.toLowerCase()
-                + "&path=" + path + "&v=" + cb);
+        resp.put("urlPublica", buildUrlBinario(brand.toLowerCase(), path, cb));
         return ResponseEntity.ok(resp);
+    }
+
+    private String buildUrlBinario(String brand, String path, long cacheBuster) {
+        return "/api/v1/admin/imagenes/binario?brand=" + brand
+                + "&path=" + URLEncoder.encode(path, StandardCharsets.UTF_8)
+                + "&v=" + cacheBuster;
     }
 
     private Map<String, String> error(String mensaje) {
