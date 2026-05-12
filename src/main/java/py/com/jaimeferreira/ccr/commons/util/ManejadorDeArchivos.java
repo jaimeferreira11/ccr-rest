@@ -22,6 +22,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import com.drew.imaging.ImageMetadataReader;
+import com.drew.metadata.Metadata;
+import com.drew.metadata.exif.ExifIFD0Directory;
+
 @Component
 public class ManejadorDeArchivos {
 
@@ -155,6 +159,12 @@ public class ManejadorDeArchivos {
                 throw new FileNotFoundException("Error al leer la imagen.");
             }
 
+            // Aplicar rotación según EXIF Orientation (los celulares guardan los píxeles
+            // en orientación nativa del sensor + un tag EXIF que indica la rotación lógica).
+            // ImageIO descarta el EXIF, por lo que sin este paso las fotos tomadas en
+            // vertical quedan acostadas en disco.
+            image = applyExifOrientation(image, imageBytes, fileName);
+
             if (onlyVertical) {
                 // Verificar si la imagen necesita ser rotada
                 if (image.getWidth() > image.getHeight()) {
@@ -173,9 +183,123 @@ public class ManejadorDeArchivos {
 
         }
         catch (Exception e) {
-            e.printStackTrace();
+            LOGGER.error("Error procesando imagen " + fileName + ", se guardará el archivo sin transformar", e);
+            // Fallback: si falló el pipeline de procesamiento, guardar el archivo crudo
+            // para no perder la foto del usuario.
+            saveRawImageFallback(outputFile, imageBytes);
         }
 
+    }
+
+    /**
+     * Lee el tag EXIF Orientation del JPEG y rota el BufferedImage acorde.
+     * Si la lectura del EXIF falla o el tag no está, devuelve la imagen sin tocar.
+     * Esto NUNCA debe romper el guardado: cualquier excepción cae en el catch y se
+     * conserva la imagen original.
+     */
+    private BufferedImage applyExifOrientation(BufferedImage image, byte[] imageBytes, String fileName) {
+        int orientation = 1;
+        try {
+            Metadata metadata = ImageMetadataReader.readMetadata(new ByteArrayInputStream(imageBytes));
+            ExifIFD0Directory dir = metadata.getFirstDirectoryOfType(ExifIFD0Directory.class);
+            if (dir != null && dir.containsTag(ExifIFD0Directory.TAG_ORIENTATION)) {
+                orientation = dir.getInt(ExifIFD0Directory.TAG_ORIENTATION);
+            }
+        }
+        catch (Exception e) {
+            LOGGER.warn("No se pudo leer EXIF Orientation de " + fileName + ", se usará orientación nativa: "
+                        + e.getMessage());
+            return image;
+        }
+
+        if (orientation == 1) {
+            return image;
+        }
+
+        try {
+            LOGGER.info("Aplicando rotación EXIF (orientation=" + orientation + ") a " + fileName);
+            return rotateByExifOrientation(image, orientation);
+        }
+        catch (Exception e) {
+            LOGGER.warn("Falló la rotación EXIF de " + fileName + ", se usará la imagen sin rotar: " + e.getMessage());
+            return image;
+        }
+    }
+
+    /**
+     * Rota/espeja un BufferedImage según el valor del tag EXIF Orientation (1..8).
+     * Los valores comunes en celulares son 1, 3, 6, 8. Los flip (2, 4, 5, 7) son raros.
+     */
+    private BufferedImage rotateByExifOrientation(BufferedImage image, int orientation) {
+        int w = image.getWidth();
+        int h = image.getHeight();
+        boolean swapDims = orientation >= 5 && orientation <= 8;
+        int newW = swapDims ? h : w;
+        int newH = swapDims ? w : h;
+
+        int type = image.getType();
+        if (type == BufferedImage.TYPE_CUSTOM || type == 0) {
+            type = BufferedImage.TYPE_INT_RGB;
+        }
+
+        BufferedImage rotated = new BufferedImage(newW, newH, type);
+        Graphics2D g2d = rotated.createGraphics();
+
+        AffineTransform t = new AffineTransform();
+        switch (orientation) {
+            case 2: // flip horizontal
+                t.scale(-1.0, 1.0);
+                t.translate(-w, 0);
+                break;
+            case 3: // 180°
+                t.translate(w, h);
+                t.rotate(Math.PI);
+                break;
+            case 4: // flip vertical
+                t.scale(1.0, -1.0);
+                t.translate(0, -h);
+                break;
+            case 5: // transpose: 90° CW + flip horizontal
+                t.rotate(-Math.PI / 2);
+                t.scale(-1.0, 1.0);
+                break;
+            case 6: // 90° CW
+                t.translate(h, 0);
+                t.rotate(Math.PI / 2);
+                break;
+            case 7: // transverse: 90° CCW + flip horizontal
+                t.scale(-1.0, 1.0);
+                t.translate(-h, 0);
+                t.translate(0, w);
+                t.rotate(3 * Math.PI / 2);
+                break;
+            case 8: // 90° CCW (270° CW)
+                t.translate(0, w);
+                t.rotate(3 * Math.PI / 2);
+                break;
+            default:
+                g2d.dispose();
+                return image;
+        }
+
+        g2d.setTransform(t);
+        g2d.drawImage(image, 0, 0, null);
+        g2d.dispose();
+        return rotated;
+    }
+
+    /**
+     * Fallback de seguridad: guarda los bytes originales del JPEG sin pasar por ImageIO.
+     * Se usa cuando algún paso del pipeline normal falló, para no perder la foto.
+     */
+    private void saveRawImageFallback(File outputFile, byte[] imageBytes) {
+        try (FileOutputStream fos = new FileOutputStream(outputFile)) {
+            fos.write(imageBytes);
+            LOGGER.warn("Imagen guardada via fallback (sin procesar): " + outputFile.getAbsolutePath());
+        }
+        catch (Exception ex) {
+            LOGGER.error("Fallback de guardado también falló para " + outputFile.getAbsolutePath(), ex);
+        }
     }
 
     private BufferedImage rotateImage(BufferedImage originalImage, int angle) {

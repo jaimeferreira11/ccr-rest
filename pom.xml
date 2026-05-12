@@ -170,6 +170,12 @@ figlet-ascii - basic
             <version>5.9</version>
         </dependency>
 
+        <!-- metadata-extractor: lectura de tag EXIF Orientation para rotar fotos del celular -->
+        <dependency>
+            <groupId>com.drewnoakes</groupId>
+            <artifactId>metadata-extractor</artifactId>
+            <version>2.19.0</version>
+        </dependency>
 
 	</dependencies>
 
