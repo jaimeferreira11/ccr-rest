@@ -25,6 +25,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 
+import py.com.jaimeferreira.ccr.commons.dto.ImagenAdminDTO;
 import py.com.jaimeferreira.ccr.commons.exception.UnknownResourceException;
 import py.com.jaimeferreira.ccr.commons.util.ManejadorDeArchivos;
 import py.com.jaimeferreira.ccr.nestle.constants.ConstantsNest;
@@ -335,6 +336,62 @@ public class ImagenesNestService {
 
         return mes.equals(month);
 
+    }
+
+    public List<ImagenAdminDTO> findAllByMes(int anio, int mes, String codDistribuidor, String codBocaOpcional) {
+        if (codDistribuidor == null || codDistribuidor.isEmpty()) {
+            throw new IllegalArgumentException("codDistribuidor es obligatorio para Nestle");
+        }
+
+        Path baseDistribuidor = Paths.get(directorioServer + mainPathImages, codDistribuidor);
+        if (!Files.exists(baseDistribuidor) || !Files.isDirectory(baseDistribuidor)) {
+            LOGGER.info("Carpeta del distribuidor no existe: {}", baseDistribuidor);
+            return new ArrayList<>();
+        }
+
+        List<ImagenAdminDTO> resultado = new ArrayList<>();
+        String mesStr = mes < 10 ? "0" + mes : String.valueOf(mes);
+
+        try (java.util.stream.Stream<Path> bocaDirs = Files.list(baseDistribuidor)) {
+            List<Path> bocas = bocaDirs.filter(Files::isDirectory)
+                    .filter(p -> codBocaOpcional == null || codBocaOpcional.isEmpty()
+                            || p.getFileName().toString().equals(codBocaOpcional))
+                    .collect(Collectors.toList());
+
+            for (Path bocaDir : bocas) {
+                String codBoca = bocaDir.getFileName().toString();
+                try (java.util.stream.Stream<Path> files = Files.list(bocaDir)) {
+                    files.filter(Files::isRegularFile)
+                         .filter(p -> p.toString().toLowerCase().endsWith(".jpg"))
+                         .filter(p -> p.getFileName().toString().contains("_" + anio + "_" + mesStr + "_"))
+                         .forEach(p -> resultado.add(buildAdminDto(codDistribuidor, codBoca, p, anio, mes)));
+                }
+            }
+        } catch (IOException e) {
+            LOGGER.error("Error iterando carpetas de Nestle", e);
+        }
+
+        return resultado;
+    }
+
+    public void rotarImagen(String pathRelativo) {
+        Path archivo = Paths.get(directorioServer, pathRelativo);
+        if (!Files.exists(archivo)) {
+            throw new UnknownResourceException("Archivo no existe: " + pathRelativo);
+        }
+        try {
+            manejadorDeArchivos.rotateImage(pathRelativo);
+        } catch (Exception e) {
+            LOGGER.error("Error rotando imagen " + pathRelativo, e);
+            throw new RuntimeException("No se pudo rotar la imagen", e);
+        }
+    }
+
+    private ImagenAdminDTO buildAdminDto(String codDistribuidor, String codBoca, Path archivo, int anio, int mes) {
+        String fileName = archivo.getFileName().toString();
+        String pathRelativo = mainPathImages + "/" + codDistribuidor + "/" + codBoca + "/" + fileName;
+        return new ImagenAdminDTO("nestle", codBoca, codDistribuidor, fileName, pathRelativo,
+                pathRelativo, anio, mes);
     }
 
 }
