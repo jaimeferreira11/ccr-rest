@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import py.com.jaimeferreira.ccr.commons.dto.ImagenAdminDTO;
+import py.com.jaimeferreira.ccr.commons.exception.UnknownResourceException;
 import py.com.jaimeferreira.ccr.commons.util.ManejadorDeArchivos;
 
 @Service
@@ -67,7 +68,7 @@ public class ImagenesShellService {
     public void rotarImagen(String pathRelativo) {
         Path archivo = Paths.get(directorioServer, pathRelativo);
         if (!Files.exists(archivo)) {
-            throw new RuntimeException("Archivo no existe: " + pathRelativo);
+            throw new UnknownResourceException("Archivo no existe: " + pathRelativo);
         }
         try {
             manejadorDeArchivos.rotateImage(pathRelativo);

@@ -27,6 +27,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import py.com.jaimeferreira.ccr.commons.dto.ImagenAdminDTO;
+import py.com.jaimeferreira.ccr.commons.exception.UnknownResourceException;
 import py.com.jaimeferreira.ccr.commons.util.ImagenPathValidator;
 import py.com.jaimeferreira.ccr.jhonson.service.ImagenesSCJService;
 import py.com.jaimeferreira.ccr.nestle.service.ImagenesNestService;
@@ -125,6 +126,9 @@ public class AdminImagenesController {
                     imagenesShellService.rotarImagen(path);
                     break;
             }
+        } catch (UnknownResourceException e) {
+            LOGGER.warn("Archivo a rotar no existe. brand={}, path={}", brand, path);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error(e.getMessage()));
         } catch (Exception e) {
             LOGGER.error("Error rotando imagen brand=" + brand + " path=" + path, e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
