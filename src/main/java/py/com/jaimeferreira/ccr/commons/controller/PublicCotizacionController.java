@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -62,16 +63,16 @@ public class PublicCotizacionController {
 
         if (ok) {
             Optional<Cotizacion> cotizacion = cotizacionService.obtenerCotizacion(null, null);
-            return ResponseEntity.ok(Map.of(
-                    "ok", true,
-                    "cotizacion", cotizacion.map(CotizacionDTO::from).orElse(null)
-            ));
+            Map<String, Object> resp = new HashMap<>();
+            resp.put("ok", true);
+            resp.put("cotizacion", cotizacion.map(CotizacionDTO::from).orElse(null));
+            return ResponseEntity.ok(resp);
         }
 
-        return ResponseEntity.ok(Map.of(
-                "ok", false,
-                "mensaje", "No se pudo obtener cotización de ninguna fuente externa"
-        ));
+        Map<String, Object> err = new HashMap<>();
+        err.put("ok", false);
+        err.put("mensaje", "No se pudo obtener cotización de ninguna fuente externa");
+        return ResponseEntity.ok(err);
     }
 
     /**
@@ -87,10 +88,10 @@ public class PublicCotizacionController {
 
         int procesados = cotizacionService.cargarCotizacionesBulk(cotizaciones);
 
-        return ResponseEntity.ok(Map.of(
-                "ok", true,
-                "procesados", procesados,
-                "total", cotizaciones.size()
-        ));
+        Map<String, Object> result = new HashMap<>();
+        result.put("ok", true);
+        result.put("procesados", procesados);
+        result.put("total", cotizaciones.size());
+        return ResponseEntity.ok(result);
     }
 }

@@ -56,7 +56,7 @@ public class CotizacionService {
      * @return cotización encontrada, o empty si no hay ningún registro
      */
     public Optional<Cotizacion> obtenerCotizacion(String moneda, LocalDate fecha) {
-        if (moneda == null || moneda.isBlank()) {
+        if (moneda == null || moneda.isEmpty()) {
             moneda = MONEDA_USD;
         }
         if (fecha == null) {

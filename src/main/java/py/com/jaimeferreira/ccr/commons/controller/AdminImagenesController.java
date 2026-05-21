@@ -132,9 +132,13 @@ public class AdminImagenesController {
     }
 
     private String buildUrlBinario(String brand, String path, long cacheBuster) {
-        return "/ccr-rest-api/public/imagenes/binario?brand=" + brand
-                + "&path=" + URLEncoder.encode(path, StandardCharsets.UTF_8)
-                + "&v=" + cacheBuster;
+        try {
+            return "/ccr-rest-api/public/imagenes/binario?brand=" + brand
+                    + "&path=" + URLEncoder.encode(path, StandardCharsets.UTF_8.name())
+                    + "&v=" + cacheBuster;
+        } catch (java.io.UnsupportedEncodingException e) {
+            throw new RuntimeException("UTF-8 not supported", e);
+        }
     }
 
     private Map<String, String> error(String mensaje) {
