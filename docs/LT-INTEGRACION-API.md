@@ -34,7 +34,15 @@ ltk_KFYQNxRAls24J46tSwndn68UYPfp9_SfyumbVCa9_es
 
 > **Importante:** Esta clave es confidencial. No compartirla por canales no seguros ni incluirla en código fuente público. En caso de compromiso, contactar al equipo CCR para regenerarla.
 
-Sin este header, o con una clave incorrecta, la API responde `401 Unauthorized`.
+Sin este header, o con una clave incorrecta, la API responde `401 Unauthorized` con el siguiente body:
+
+```json
+{
+  "status": "ERROR",
+  "mensaje": "API key inválida",
+  "registros": 0
+}
+```
 
 ### Características de la clave
 
@@ -261,9 +269,35 @@ Carga o actualiza los compradores asociados a tickets.
 | Código | Descripción |
 |--------|-------------|
 | `200 OK` | Registros procesados correctamente |
-| `400 Bad Request` | JSON malformado o campos con tipos incorrectos |
+| `400 Bad Request` | JSON malformado o tipos de campo incorrectos |
 | `401 Unauthorized` | API key ausente o inválida |
 | `500 Internal Server Error` | Error interno del servidor |
+
+### Respuesta 200 (éxito)
+
+```json
+{ "status": "OK", "mensaje": "Sucursales guardadas", "registros": 10 }
+```
+
+### Respuesta 401 (auth inválida)
+
+```json
+{ "status": "ERROR", "mensaje": "API key inválida", "registros": 0 }
+```
+
+### Respuesta 400 (JSON inválido)
+
+El error 400 usa el formato estándar de Spring Boot — distinto al formato de negocio de los otros endpoints:
+
+```json
+{
+  "timestamp": "2026-05-21T22:01:59.741+00:00",
+  "status": 400,
+  "error": "Bad Request",
+  "message": "JSON parse error: ...",
+  "path": "/ccr-rest-api/lt/api/v1/sucursales"
+}
+```
 
 ---
 
