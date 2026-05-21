@@ -44,6 +44,11 @@ public class JWTAuthorizationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
                                                                                                                  throws ServletException,
                                                                                                                  IOException {
+        // Las rutas /lt/ usan su propio filtro de API key; el JWT no aplica aquí
+        if (request.getServletPath().startsWith("/lt/")) {
+            chain.doFilter(request, response);
+            return;
+        }
         try {
             if (existeJWTToken(request, response)) {
                 Claims claims = validateToken(request);

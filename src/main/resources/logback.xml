@@ -27,6 +27,26 @@
 		</encoder>
 	</appender>
 
+	<!-- Audit log exclusivo para integración LT -->
+	<appender name="ltAuditAppender"
+		class="ch.qos.logback.core.rolling.RollingFileAppender">
+		<file>${logDirectory}/lt-audit.log</file>
+		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+			<fileNamePattern>${logDirectory}/lt-audit_%d{yyyy-MM-dd}.log</fileNamePattern>
+			<maxHistory>90</maxHistory>
+			<totalSizeCap>200MB</totalSizeCap>
+		</rollingPolicy>
+		<encoder>
+			<charset>${logEncoding}</charset>
+			<pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} | %msg%n</pattern>
+		</encoder>
+	</appender>
+
+	<!-- Audit log LT: solo va al archivo lt-audit.log, no al log general -->
+	<logger name="lt.audit" level="INFO" additivity="false">
+		<appender-ref ref="ltAuditAppender"/>
+	</logger>
+
 	<!-- Tu código: INFO para ver login, errores de negocio, etc. -->
 	<logger name="py.com.jaimeferreira.ccr" level="INFO" additivity="false">
 		<appender-ref ref="CONSOLE" />

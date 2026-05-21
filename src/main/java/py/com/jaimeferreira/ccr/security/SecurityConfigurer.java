@@ -36,6 +36,9 @@ public class SecurityConfigurer extends WebSecurityConfigurerAdapter {
     @Autowired
     private PlataformaStatusFilter plataformaStatusFilter;
 
+    @Autowired
+    private LtApiKeyFilter ltApiKeyFilter;
+
     /*
      * ~ BEANS
      * --------------------------------------------------------------
@@ -93,6 +96,7 @@ public class SecurityConfigurer extends WebSecurityConfigurerAdapter {
             .sessionCreationPolicy(SessionCreationPolicy.STATELESS);
 
         // Indicamos que usaremos un filtro
+        http.addFilterBefore(ltApiKeyFilter, UsernamePasswordAuthenticationFilter.class);
         http.addFilterBefore(plataformaStatusFilter, UsernamePasswordAuthenticationFilter.class);
         http.addFilterBefore(authFiltroToken, UsernamePasswordAuthenticationFilter.class);
     }
