@@ -276,6 +276,14 @@ public class ReporteInsService {
                                                         : csvBytes;
             LOGGER.info("CSV concatenado generado ({} bytes) para cliente {}", csvConcatenado.length, codClienteNorm);
 
+            // Liberar referencias a las copias intermedias del CSV: si datosBase != null,
+            // csvConcatenado es una copia nueva y tanto csvBytes como datosBase pueden
+            // ser GC'd ahora (~hasta 2x el tamaño del CSV liberado del heap).
+            if (datosBase != null) {
+                csvBytes = null;
+                datosBase = null;
+            }
+
             // Leer y filtrar data del CSV concatenado
             List<String[]> dataFiltrada = leerYFiltrarCsvData(csvConcatenado, filtros);
             int totalDataRows = dataFiltrada.size() - 1; // sin header
@@ -297,7 +305,7 @@ public class ReporteInsService {
 
             // Abrir template Excel: busca primero el específico del cliente+categoría en disco,
             // luego el default.
-            IOUtils.setByteArrayMaxOverride(Integer.MAX_VALUE);
+            IOUtils.setByteArrayMaxOverride(500 * 1024 * 1024);
             InputStream templateStream = resolverTemplateStream(tipoReporte, codClienteNorm, codCategoria);
             XSSFWorkbook templateWb = new XSSFWorkbook(templateStream);
             templateStream.close();
@@ -318,6 +326,11 @@ public class ReporteInsService {
 
             poblarFact(workbook, dataFiltrada, codClienteNorm, clienteLabel, pais, dateCellStyle, tipoReporte, ordenAperturaMap, agrupadorSegmentoMap, idxSubMarca, mesInicioFiscal);
             poblarTotalEmpresa(workbook, dataFiltrada, codClienteNorm, clienteLabel, pais, dateCellStyle, tipoReporte, ordenAperturaMap, agrupadorSegmentoMap, idxSubMarca, mesInicioFiscal);
+
+            // Ya no se vuelve a leer; liberar para que el GC recupere las N filas (String[][])
+            // antes del write del Excel, que es el otro pico de memoria.
+            dataFiltrada = null;
+
             actualizarRangosTablas(templateWb, totalDataRows, calendarRows, tipoReporte, idxSubMarca >= 0);
             refrescarTablasDinamicas(templateWb);
             ocultarHoja(workbook, SHEET_FACT);
@@ -614,9 +627,14 @@ public class ReporteInsService {
                 row.createCell(2, CellType.NUMERIC).setCellValue(anio);
                 row.createCell(3, CellType.STRING).setCellValue(MESES_ES[mes - 1]);
 
-                // Columna E: Año Fiscal (fórmula)
-                Cell cellAnoFiscal = row.createCell(4);
-                cellAnoFiscal.setCellFormula(formulaAnoFiscal);
+                // Columna E: Año Fiscal (fórmula con referencia estructurada de tabla).
+                // POI's FormulaParser no soporta [@Col] / [@[Col]], así que se escribe
+                // el string directo al XML (mismo enfoque que addNewCalculatedColumnFormula
+                // en la definición de la tabla). Excel la evalúa al abrir gracias a
+                // setForceFormulaRecalculation(true).
+                org.apache.poi.xssf.usermodel.XSSFCell cellAnoFiscal =
+                        (org.apache.poi.xssf.usermodel.XSSFCell) row.createCell(4);
+                cellAnoFiscal.getCTCell().addNewF().setStringValue(formulaAnoFiscal);
 
                 // Columna F: Cotización USD (último día hábil del mes)
                 LocalDate ultimoDiaMes = fecha.withDayOfMonth(fecha.lengthOfMonth());

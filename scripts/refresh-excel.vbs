@@ -49,24 +49,28 @@ End If
 
 Err.Clear
 
-' Primer RefreshAll: reconstruye el modelo de datos desde las tablas
+' Deshabilitar background queries para que RefreshAll sea sincrónico
+On Error Resume Next
+Dim conn
+For Each conn In workbook.Connections
+    If conn.Type = 1 Then  ' xlConnectionTypeOLEDB
+        conn.OLEDBConnection.BackgroundQuery = False
+    ElseIf conn.Type = 2 Then  ' xlConnectionTypeODBC
+        conn.ODBCConnection.BackgroundQuery = False
+    End If
+    Err.Clear
+Next
+
+' RefreshAll: reconstruye el modelo de datos VertiPaq desde las tablas
 workbook.RefreshAll
 If Err.Number <> 0 Then
-    WScript.StdErr.WriteLine "Error en primer RefreshAll: " & Err.Description
+    WScript.StdErr.WriteLine "Error en RefreshAll: " & Err.Description
     Err.Clear
 End If
 
-' Esperar a que las conexiones background terminen
-WScript.Sleep 10000
-
-' Segundo RefreshAll para resolver dependencias encadenadas entre medidas DAX
-workbook.RefreshAll
-If Err.Number <> 0 Then
-    WScript.StdErr.WriteLine "Error en segundo RefreshAll: " & Err.Description
-    Err.Clear
-End If
-
-WScript.Sleep 5000
+' Esperar a que TODAS las queries async terminen (correcto para modelos grandes)
+excel.CalculateUntilAsyncQueriesDone
+Err.Clear
 
 ' Re-ocultar hojas de datos que POI marcó como hidden
 ' (Excel COM puede resetear la visibilidad al hacer RefreshAll/Save)

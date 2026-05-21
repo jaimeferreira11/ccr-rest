@@ -14,9 +14,10 @@ import java.util.concurrent.Executor;
  * nuevo por cada tarea sin límite — peligroso bajo carga alta.
  *
  * Con esta configuración:
- * - corePoolSize=2: 2 threads siempre disponibles para generación de reportes
- * - maxPoolSize=5: máximo 5 generaciones concurrentes (cada una puede usar ~200MB RAM)
- * - queueCapacity=10: hasta 10 requests en cola antes de rechazar
+ * - corePoolSize=1: 1 thread siempre disponible para generación de reportes
+ * - maxPoolSize=2: máximo 2 generaciones concurrentes (cada una puede consumir
+ *   varios cientos de MB de heap durante el procesamiento del Excel)
+ * - queueCapacity=20: hasta 20 requests en cola antes de rechazar
  *
  * @author Jaime Ferreira
  */
@@ -27,9 +28,9 @@ public class AsyncConfig implements AsyncConfigurer {
     @Override
     public Executor getAsyncExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        executor.setCorePoolSize(2);
-        executor.setMaxPoolSize(5);
-        executor.setQueueCapacity(10);
+        executor.setCorePoolSize(1);
+        executor.setMaxPoolSize(2);
+        executor.setQueueCapacity(20);
         executor.setThreadNamePrefix("insights-async-");
         executor.setWaitForTasksToCompleteOnShutdown(true);
         executor.setAwaitTerminationSeconds(60);

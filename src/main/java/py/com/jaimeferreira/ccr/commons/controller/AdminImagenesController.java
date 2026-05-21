@@ -2,10 +2,6 @@ package py.com.jaimeferreira.ccr.commons.controller;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.LinkOption;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -13,11 +9,7 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.FileSystemResource;
-import org.springframework.core.io.Resource;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -47,9 +39,6 @@ public class AdminImagenesController {
 
     @Autowired
     private ImagenesShellService imagenesShellService;
-
-    @Value("${path.directory.main_imagenes}")
-    private String directorioServer;
 
     @GetMapping(value = "/listar", produces = "application/json")
     public ResponseEntity<?> listar(
@@ -143,36 +132,9 @@ public class AdminImagenesController {
     }
 
     private String buildUrlBinario(String brand, String path, long cacheBuster) {
-        return "/api/v1/admin/imagenes/binario?brand=" + brand
+        return "/ccr-rest-api/public/imagenes/binario?brand=" + brand
                 + "&path=" + URLEncoder.encode(path, StandardCharsets.UTF_8)
                 + "&v=" + cacheBuster;
-    }
-
-    @GetMapping("/binario")
-    public ResponseEntity<Resource> binario(
-            @RequestParam("brand") String brand,
-            @RequestParam("path") String path) {
-
-        if (!ImagenPathValidator.isBrandSoportado(brand)) {
-            return ResponseEntity.badRequest().build();
-        }
-        try {
-            ImagenPathValidator.validarPathRelativo(brand, path);
-        } catch (IllegalArgumentException e) {
-            LOGGER.warn("Rechazado intento de leer path inválido. brand={}, path={}, error={}",
-                        brand, path, e.getMessage());
-            return ResponseEntity.badRequest().build();
-        }
-
-        Path archivo = Paths.get(directorioServer, path);
-        if (!Files.exists(archivo) || !Files.isRegularFile(archivo, LinkOption.NOFOLLOW_LINKS)) {
-            return ResponseEntity.notFound().build();
-        }
-
-        Resource resource = new FileSystemResource(archivo.toFile());
-        return ResponseEntity.ok()
-                .contentType(MediaType.IMAGE_JPEG)
-                .body(resource);
     }
 
     private Map<String, String> error(String mensaje) {
