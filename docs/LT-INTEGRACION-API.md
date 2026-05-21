@@ -6,11 +6,13 @@ Documentación técnica para la carga de datos desde el sistema LT al servidor C
 
 ## URL Base
 
+**Producción:**
+
 ```
-https://<servidor>/ccr-rest-api/lt/api/v1
+http://200.108.131.206:8051/ccr-rest-api/lt/api/v1
 ```
 
-En ambiente de desarrollo:
+**Desarrollo:**
 
 ```
 http://localhost:8081/ccr-rest-api/lt/api/v1
@@ -304,7 +306,7 @@ El error 400 usa el formato estándar de Spring Boot — distinto al formato de 
 ## Ejemplo completo con curl
 
 ```bash
-curl -X POST https://<servidor>/ccr-rest-api/lt/api/v1/sucursales \
+curl -X POST http://200.108.131.206:8051/ccr-rest-api/lt/api/v1/sucursales \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer ltk_KFYQNxRAls24J46tSwndn68UYPfp9_SfyumbVCa9_es" \
   -d '[
