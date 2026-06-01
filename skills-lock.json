@@ -7,6 +7,18 @@
       "skillPath": "cli-tool/components/skills/enterprise-communication/excel-analysis/SKILL.md",
       "computedHash": "376e46440252fdbb31a67af8a88ad3f72ffb1495cf1a41210b5e0f51ae44b63a"
     },
+    "Webhook Automation": {
+      "source": "claude-office-skills/skills",
+      "sourceType": "github",
+      "skillPath": "webhook-automation/SKILL.md",
+      "computedHash": "1df4d6308b87de01df422a895a6e5a1fece4bd777ba14955e267579b1cfa72dc"
+    },
+    "clerk-webhooks": {
+      "source": "clerk/skills",
+      "sourceType": "github",
+      "skillPath": "skills/features/clerk-webhooks/SKILL.md",
+      "computedHash": "de12deda380be19d32d62c4106a6b78736cd4d9cc6dd5b214f6039853ad89e54"
+    },
     "data-analysis": {
       "source": "excelsioryy/data-analysis-skill",
       "sourceType": "github",
@@ -24,6 +36,24 @@
       "sourceType": "github",
       "skillPath": ".claude/skills/excel-data-analyzer/SKILL.md",
       "computedHash": "bf891f43a63c05f6a6b1f6c546767cbaf8e77caca61d513f5c2cff4bb153fa45"
+    },
+    "power-bi-dax-optimization": {
+      "source": "github/awesome-copilot",
+      "sourceType": "github",
+      "skillPath": "skills/power-bi-dax-optimization/SKILL.md",
+      "computedHash": "e98206e9864acfbfec475a1213c2687c293f0ed9e4903b6a9dc271ff313d0944"
+    },
+    "power-bi-model-design-review": {
+      "source": "github/awesome-copilot",
+      "sourceType": "github",
+      "skillPath": "skills/power-bi-model-design-review/SKILL.md",
+      "computedHash": "0e1f4a853086b048036dbd6f21527c3557713d76bb036b4c0b51c370d73ea264"
+    },
+    "powershell-windows": {
+      "source": "sickn33/antigravity-awesome-skills",
+      "sourceType": "github",
+      "skillPath": "skills/powershell-windows/SKILL.md",
+      "computedHash": "4cb2c0cf1053c7049af510046169ab82d08205a80f960c8fc7bec39e9d3399b9"
     }
   }
 }

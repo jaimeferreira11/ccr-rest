@@ -102,6 +102,65 @@ public enum TipoReporte {
     public int getIdxExtra()            { return idxExtra; }
     public boolean tieneExtra()         { return idxExtra >= 0; }
 
+    /**
+     * Cantidad mínima de columnas que un CSV debe tener para este tipo de reporte.
+     * Es el mayor índice usado + 1 (incluyendo la columna extra si aplica).
+     */
+    public int getMinCols() {
+        int max = idxVolumenUnidades;
+        if (idxExtra > max) max = idxExtra;
+        return max + 1;
+    }
+
+    // Nombres de columnas esperados en el CSV de datos por posición.
+    // Cada posición es un set de alias aceptados; el primero es el nombre canónico
+    // usado en mensajes de error. La comparación se hace normalizada (case + acentos).
+    private static final String[][] HEADERS_NORMAL = {
+            { "Categoría" },
+            { "Apertura", "Apertura Geográfica" },
+            { "Empresa" },
+            { "Marca" },
+            { "Segmento" },
+            { "Mes" },
+            { "Año" },
+            { "Distribución Física" },
+            { "Distribución Ponderada" },
+            { "Facturación" },
+            { "Precio" },
+            { "Volumen" },
+            { "Volumen Unidades" }
+    };
+
+    private static final String[][] HEADERS_CADENA = {
+            { "Categoría" },
+            { "Apertura Geográfica", "Apertura" },
+            { "Empresa" },
+            { "Marca" },
+            { "Variedad" },
+            { "Segmento" },
+            { "Distribución Física" },
+            { "Distribución Ponderada" },
+            { "Mes" },
+            { "Año" },
+            { "Facturación" },
+            { "Precio" },
+            { "Volumen" },
+            { "Volumen Unidades" }
+    };
+
+    /**
+     * Headers esperados (en orden) para el CSV de datos de este tipo.
+     * Cada posición devuelve un array de alias aceptados; el primero es el nombre canónico.
+     * No incluye la columna opcional SUB_MARCA al final.
+     */
+    public String[][] getExpectedHeaders() {
+        switch (this) {
+            case NORMAL: return HEADERS_NORMAL;
+            case CADENA: return HEADERS_CADENA;
+            default: throw new IllegalStateException("Sin headers definidos para " + this);
+        }
+    }
+
     /** Nombre base del template sin extensión, ej: "template_normal" */
     public String getTemplateBaseName() {
         return templateBaseName;

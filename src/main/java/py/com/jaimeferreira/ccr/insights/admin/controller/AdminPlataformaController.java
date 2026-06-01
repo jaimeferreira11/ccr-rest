@@ -1,10 +1,23 @@
 package py.com.jaimeferreira.ccr.insights.admin.controller;
 
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.InputStreamResource;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -72,6 +85,9 @@ public class AdminPlataformaController {
 
     @Autowired
     private LogStreamService logStreamService;
+
+    @Value("${logging.file.name:./log/ccr-api-rest.log}")
+    private String logFilePath;
 
     /** Retorna el estado actual de la plataforma. */
     @GetMapping(value = "/plataforma", produces = "application/json")
@@ -332,6 +348,118 @@ public class AdminPlataformaController {
         String usuario = SecurityContextHolder.getContext().getAuthentication().getName();
         LOGGER.info("Usuario '{}' se conecta al stream de logs", usuario);
         return logStreamService.subscribe();
+    }
+
+    /**
+     * Descarga el archivo de log activo (día actual). Devuelve el contenido crudo
+     * tal como está en disco.
+     */
+    @GetMapping(value = "/logs/hoy")
+    public ResponseEntity<Resource> descargarLogHoy() {
+        String usuario = SecurityContextHolder.getContext().getAuthentication().getName();
+        LOGGER.info("Usuario '{}' descarga log del día", usuario);
+
+        File archivo = new File(logFilePath);
+        if (!archivo.exists()) {
+            throw new UnknownResourceException("No hay log del día disponible.");
+        }
+
+        String fecha = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+        String nombreDescarga = "ccr-api-rest_" + fecha + ".log";
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"" + nombreDescarga + "\"")
+                .contentLength(archivo.length())
+                .body(new FileSystemResource(archivo));
+    }
+
+    /**
+     * Descarga el log de una fecha histórica. Si el día tiene varios archivos rotados por tamaño
+     * (ccr-api-rest_FECHA.0.log, .1.log, ...) los concatena en orden de índice.
+     *
+     * @param fecha en formato ISO YYYY-MM-DD
+     */
+    @GetMapping(value = "/logs/{fecha}")
+    public ResponseEntity<Resource> descargarLogPorFecha(@PathVariable String fecha) {
+        String usuario = SecurityContextHolder.getContext().getAuthentication().getName();
+        LOGGER.info("Usuario '{}' descarga log de fecha {}", usuario, fecha);
+
+        LocalDate fechaParseada;
+        try {
+            fechaParseada = LocalDate.parse(fecha, DateTimeFormatter.ISO_LOCAL_DATE);
+        } catch (Exception e) {
+            throw new UnknownResourceException("Fecha inválida. Use formato YYYY-MM-DD.");
+        }
+        if (fechaParseada.isAfter(LocalDate.now())) {
+            throw new UnknownResourceException("La fecha no puede ser futura.");
+        }
+        if (fechaParseada.isEqual(LocalDate.now())) {
+            // Para hoy delegamos al archivo activo (no tiene sufijo de fecha)
+            return descargarLogHoy();
+        }
+
+        File logDir = new File(logFilePath).getParentFile();
+        if (logDir == null || !logDir.isDirectory()) {
+            throw new UnknownResourceException("Directorio de logs no disponible.");
+        }
+
+        final String prefijo = "ccr-api-rest_" + fecha + ".";
+        File[] matches = logDir.listFiles(
+                (dir, name) -> name.startsWith(prefijo) && name.endsWith(".log"));
+        if (matches == null || matches.length == 0) {
+            throw new UnknownResourceException("No hay log para la fecha " + fecha + ".");
+        }
+
+        // Ordenar por índice numérico (.0, .1, .2, ...)
+        Arrays.sort(matches, Comparator.comparingInt(f -> extraerIndiceRolling(f.getName(), prefijo)));
+
+        String nombreDescarga = "ccr-api-rest_" + fecha + ".log";
+        long contentLength = Arrays.stream(matches).mapToLong(File::length).sum();
+
+        if (matches.length == 1) {
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                    .header(HttpHeaders.CONTENT_DISPOSITION,
+                            "attachment; filename=\"" + nombreDescarga + "\"")
+                    .contentLength(contentLength)
+                    .body(new FileSystemResource(matches[0]));
+        }
+
+        // Múltiples archivos: stream concatenado en orden
+        InputStream concatenado = nuevoInputStreamConcatenado(matches);
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"" + nombreDescarga + "\"")
+                .contentLength(contentLength)
+                .body(new InputStreamResource(concatenado));
+    }
+
+    private int extraerIndiceRolling(String fileName, String prefijo) {
+        try {
+            String resto = fileName.substring(prefijo.length()); // "0.log" / "12.log"
+            int dot = resto.indexOf('.');
+            return dot > 0 ? Integer.parseInt(resto.substring(0, dot)) : 0;
+        } catch (Exception e) {
+            return Integer.MAX_VALUE; // archivos sin índice claro al final
+        }
+    }
+
+    private InputStream nuevoInputStreamConcatenado(File[] archivos) {
+        java.util.Enumeration<InputStream> enumeracion = new java.util.Enumeration<InputStream>() {
+            private int i = 0;
+            @Override public boolean hasMoreElements() { return i < archivos.length; }
+            @Override public InputStream nextElement() {
+                try {
+                    return Files.newInputStream(archivos[i++].toPath());
+                } catch (IOException e) {
+                    throw new RuntimeException("Error al abrir " + archivos[i - 1].getName(), e);
+                }
+            }
+        };
+        return new java.io.SequenceInputStream(enumeracion);
     }
 
     private void validarCsv(MultipartFile archivo, String descripcion) {

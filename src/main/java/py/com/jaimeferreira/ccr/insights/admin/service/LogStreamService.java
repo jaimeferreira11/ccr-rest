@@ -28,7 +28,7 @@ public class LogStreamService {
     private static final Logger LOGGER = LoggerFactory.getLogger(LogStreamService.class);
 
     /** Cantidad de líneas históricas que se envían al conectar un nuevo cliente. */
-    private static final int INITIAL_LINES = 100;
+    private static final int INITIAL_LINES = 200;
 
     @Value("${logging.file.name:./log/ccr-api-rest.log}")
     private String logFilePath;
@@ -51,6 +51,8 @@ public class LogStreamService {
             lastFileLength = logFile.length();
         }
         scheduler.scheduleWithFixedDelay(this::checkForNewLines, 1, 1, TimeUnit.SECONDS);
+        // Heartbeat: evita que proxies/balanceadores corten la conexión SSE por inactividad
+        scheduler.scheduleWithFixedDelay(this::sendHeartbeat, 15, 15, TimeUnit.SECONDS);
         LOGGER.info("LogStreamService iniciado, monitoreando: {}", logFilePath);
     }
 
@@ -133,6 +135,18 @@ public class LogStreamService {
         for (SseEmitter emitter : emitters) {
             try {
                 emitter.send(SseEmitter.event().name("log").data(data));
+            } catch (IOException e) {
+                emitters.remove(emitter);
+            }
+        }
+    }
+
+    /** Envía un comment SSE (no genera evento en el cliente) para mantener viva la conexión. */
+    private void sendHeartbeat() {
+        if (emitters.isEmpty()) return;
+        for (SseEmitter emitter : emitters) {
+            try {
+                emitter.send(SseEmitter.event().comment("keepalive"));
             } catch (IOException e) {
                 emitters.remove(emitter);
             }
