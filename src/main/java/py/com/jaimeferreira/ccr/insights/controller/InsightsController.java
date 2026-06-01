@@ -111,7 +111,8 @@ public class InsightsController {
             @RequestParam("codCliente") String codCliente,
             @RequestParam("codCategoria") String codCategoria,
             @RequestParam("tipoReporte") String tipoReporte,
-            @RequestParam(value = "mesInicioFiscal", defaultValue = "1") int mesInicioFiscal) {
+            @RequestParam(value = "mesInicioFiscal", defaultValue = "1") int mesInicioFiscal,
+            @RequestParam(value = "mesReporte", required = false) Integer mesReporte) {
 
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         String usuario = auth.getName();
@@ -135,11 +136,15 @@ public class InsightsController {
             throw new UnknownResourceException("mesInicioFiscal debe estar entre 1 y 12. Valor recibido: " + mesInicioFiscal);
         }
 
+        if (mesReporte != null && (mesReporte < 1 || mesReporte > 12)) {
+            throw new UnknownResourceException("mesReporte debe estar entre 1 y 12. Valor recibido: " + mesReporte);
+        }
+
         if (csvData.isEmpty()) {
             throw new UnknownResourceException("El archivo CSV de datos no puede estar vacío.");
         }
 
-        InformeIns informe = reporteService.iniciarGeneracion(csvData, csvFiltros, codCliente, codCategoria, tipo, mesInicioFiscal, usuario);
+        InformeIns informe = reporteService.iniciarGeneracion(csvData, csvFiltros, codCliente, codCategoria, tipo, mesInicioFiscal, mesReporte, usuario);
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(InformeDTO.from(informe));
     }
 

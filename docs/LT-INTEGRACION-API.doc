@@ -1,0 +1,659 @@
+<html xmlns:o="urn:schemas-microsoft-com:office:office"
+      xmlns:w="urn:schemas-microsoft-com:office:word"
+      xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+<meta charset="utf-8">
+<meta name="ProgId" content="Word.Document">
+<meta name="Generator" content="Microsoft Word 15">
+<meta name="Originator" content="Microsoft Word 15">
+<title>API de Integracion LT - CCR</title>
+<!--[if gte mso 9]>
+<xml>
+  <w:WordDocument>
+    <w:View>Print</w:View>
+    <w:Zoom>100</w:Zoom>
+    <w:DoNotOptimizeForBrowser/>
+  </w:WordDocument>
+</xml>
+<![endif]-->
+<style>
+@page {
+    size: 21cm 29.7cm;
+    margin: 2.5cm 2cm 2.5cm 2cm;
+    mso-page-orientation: portrait;
+    mso-header-margin: 1cm;
+    mso-footer-margin: 1cm;
+}
+body {
+    font-family: 'Calibri', 'Segoe UI', Arial, sans-serif;
+    font-size: 11pt;
+    color: #222222;
+    line-height: 1.45;
+}
+h1 {
+    font-family: 'Calibri', 'Segoe UI', Arial, sans-serif;
+    font-size: 22pt;
+    color: #1F3864;
+    border-bottom: 2pt solid #1F3864;
+    padding-bottom: 6pt;
+    margin-top: 24pt;
+    margin-bottom: 12pt;
+    page-break-before: always;
+}
+h1.first { page-break-before: avoid; }
+h2 {
+    font-family: 'Calibri', 'Segoe UI', Arial, sans-serif;
+    font-size: 15pt;
+    color: #2E5395;
+    border-bottom: 1pt solid #BFD0E8;
+    padding-bottom: 4pt;
+    margin-top: 18pt;
+    margin-bottom: 8pt;
+}
+h3 {
+    font-family: 'Calibri', 'Segoe UI', Arial, sans-serif;
+    font-size: 13pt;
+    color: #2E5395;
+    margin-top: 14pt;
+    margin-bottom: 6pt;
+}
+h4 {
+    font-family: 'Calibri', 'Segoe UI', Arial, sans-serif;
+    font-size: 11pt;
+    color: #404040;
+    font-weight: bold;
+    margin-top: 10pt;
+    margin-bottom: 4pt;
+}
+p { margin: 0 0 8pt 0; text-align: justify; }
+ul, ol { margin: 0 0 8pt 0; padding-left: 24pt; }
+li { margin-bottom: 4pt; }
+code {
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 10pt;
+    background-color: #F2F2F2;
+    color: #C7254E;
+    padding: 1pt 4pt;
+    border: 0.5pt solid #E0E0E0;
+}
+pre {
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 9.5pt;
+    background-color: #F7F7F9;
+    border: 0.5pt solid #D0D7DE;
+    border-left: 3pt solid #1F3864;
+    padding: 10pt 12pt;
+    margin: 6pt 0 10pt 0;
+    color: #24292F;
+    white-space: pre-wrap;
+    line-height: 1.35;
+}
+table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 6pt 0 12pt 0;
+    font-size: 10pt;
+}
+th {
+    background-color: #1F3864;
+    color: #FFFFFF;
+    font-weight: bold;
+    padding: 6pt 8pt;
+    text-align: left;
+    border: 0.5pt solid #1F3864;
+}
+td {
+    padding: 5pt 8pt;
+    border: 0.5pt solid #BFBFBF;
+    vertical-align: top;
+}
+tr:nth-child(even) td { background-color: #F7F9FC; }
+.cover {
+    text-align: center;
+    margin-top: 120pt;
+    page-break-after: always;
+}
+.cover .eyebrow {
+    font-size: 11pt;
+    letter-spacing: 4pt;
+    color: #2E5395;
+    text-transform: uppercase;
+    margin-bottom: 12pt;
+}
+.cover .title {
+    font-size: 30pt;
+    color: #1F3864;
+    font-weight: bold;
+    line-height: 1.15;
+    margin-bottom: 8pt;
+}
+.cover .subtitle {
+    font-size: 16pt;
+    color: #555555;
+    font-weight: normal;
+    margin-bottom: 60pt;
+}
+.cover .meta {
+    margin-top: 60pt;
+    font-size: 11pt;
+    color: #444444;
+}
+.cover .meta table {
+    margin: 0 auto;
+    width: 60%;
+    font-size: 11pt;
+}
+.cover .meta td {
+    border: none;
+    padding: 4pt 8pt;
+    background-color: transparent !important;
+}
+.cover .meta td.label {
+    text-align: right;
+    color: #2E5395;
+    font-weight: bold;
+    width: 40%;
+}
+.cover .meta td.value {
+    text-align: left;
+    width: 60%;
+}
+.divider {
+    border: none;
+    border-top: 1pt solid #BFD0E8;
+    margin: 18pt 0;
+}
+.callout {
+    background-color: #FFF8E1;
+    border-left: 3pt solid #F2A900;
+    padding: 8pt 12pt;
+    margin: 8pt 0 12pt 0;
+    font-size: 10.5pt;
+}
+.callout.info {
+    background-color: #E8F1FB;
+    border-left-color: #2E5395;
+}
+.callout strong { color: #8A6100; }
+.callout.info strong { color: #1F3864; }
+.method {
+    display: inline-block;
+    background-color: #1F8A4C;
+    color: #FFFFFF;
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 9.5pt;
+    font-weight: bold;
+    padding: 2pt 8pt;
+    margin-right: 6pt;
+    border-radius: 3pt;
+}
+.endpoint-path {
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 12pt;
+    color: #1F3864;
+    font-weight: bold;
+}
+.toc {
+    margin: 12pt 0 24pt 0;
+}
+.toc table { font-size: 11pt; }
+.toc td { border: none; padding: 4pt 8pt; background: transparent !important; }
+.toc td.num { color: #2E5395; font-weight: bold; width: 6%; }
+.toc td.dots { text-align: right; color: #999; }
+.footer-note {
+    margin-top: 24pt;
+    padding-top: 8pt;
+    border-top: 0.5pt solid #BFBFBF;
+    font-size: 9pt;
+    color: #777777;
+    text-align: center;
+}
+</style>
+</head>
+<body lang="es">
+
+<!-- PORTADA -->
+<div class="cover">
+    <div class="eyebrow">Documentacion Tecnica</div>
+    <div class="title">API de Integracion LT &harr; CCR</div>
+    <div class="subtitle">Especificacion de endpoints para carga de datos<br/>desde el sistema POS del proveedor LT</div>
+
+    <div class="meta">
+        <table>
+            <tr><td class="label">Cliente:</td><td class="value">CCR Paraguay</td></tr>
+            <tr><td class="label">Proveedor:</td><td class="value">LT (sistema POS)</td></tr>
+            <tr><td class="label">Version del documento:</td><td class="value">1.0</td></tr>
+            <tr><td class="label">Fecha de emision:</td><td class="value">31 de mayo de 2026</td></tr>
+            <tr><td class="label">Autor:</td><td class="value">D-Tech Consulting</td></tr>
+            <tr><td class="label">Clasificacion:</td><td class="value">Confidencial</td></tr>
+        </table>
+    </div>
+</div>
+
+<!-- TABLA DE CONTENIDOS -->
+<h1 class="first">Tabla de contenidos</h1>
+<div class="toc">
+<table>
+    <tr><td class="num">1.</td><td>Datos de conexion (resumen)</td><td class="dots">3</td></tr>
+    <tr><td class="num">2.</td><td>Introduccion y alcance</td><td class="dots">4</td></tr>
+    <tr><td class="num">3.</td><td>URL de servicio</td><td class="dots">5</td></tr>
+    <tr><td class="num">4.</td><td>Autenticacion</td><td class="dots">6</td></tr>
+    <tr><td class="num">5.</td><td>Formato general de mensajes</td><td class="dots">7</td></tr>
+    <tr><td class="num">6.</td><td>Endpoints</td><td class="dots">8</td></tr>
+    <tr><td class="num"></td><td>&nbsp;&nbsp;&nbsp;6.1&nbsp;&nbsp;POST /sucursales</td><td class="dots">8</td></tr>
+    <tr><td class="num"></td><td>&nbsp;&nbsp;&nbsp;6.2&nbsp;&nbsp;POST /productos</td><td class="dots">9</td></tr>
+    <tr><td class="num"></td><td>&nbsp;&nbsp;&nbsp;6.3&nbsp;&nbsp;POST /tickets</td><td class="dots">10</td></tr>
+    <tr><td class="num"></td><td>&nbsp;&nbsp;&nbsp;6.4&nbsp;&nbsp;POST /personas</td><td class="dots">11</td></tr>
+    <tr><td class="num">7.</td><td>Codigos de respuesta HTTP</td><td class="dots">12</td></tr>
+    <tr><td class="num">8.</td><td>Ejemplo completo con curl</td><td class="dots">13</td></tr>
+    <tr><td class="num">9.</td><td>Notas tecnicas y recomendaciones</td><td class="dots">14</td></tr>
+    <tr><td class="num">10.</td><td>Soporte y contacto</td><td class="dots">14</td></tr>
+</table>
+</div>
+
+<!-- 1. DATOS DE CONEXION (RESUMEN DESTACADO) -->
+<h1>1. Datos de conexion (resumen)</h1>
+
+<p>Esta seccion resume los datos esenciales para conectarse a la API. El resto del documento desarrolla cada punto en detalle.</p>
+
+<table>
+    <tr><th style="width:25%">Parametro</th><th>Valor</th></tr>
+    <tr>
+        <td><strong>URL base</strong></td>
+        <td><code>http://200.108.131.206:8051/ccr-rest-api/lt/api/v1</code></td>
+    </tr>
+    <tr>
+        <td><strong>Autenticacion</strong></td>
+        <td>Bearer Token estatico en cabecera <code>Authorization</code></td>
+    </tr>
+    <tr>
+        <td><strong>Token de acceso</strong></td>
+        <td><code>ltk_KFYQNxRAls24J46tSwndn68UYPfp9_SfyumbVCa9_es</code></td>
+    </tr>
+    <tr>
+        <td><strong>Cabecera completa</strong></td>
+        <td><code>Authorization: Bearer ltk_KFYQNxRAls24J46tSwndn68UYPfp9_SfyumbVCa9_es</code></td>
+    </tr>
+    <tr>
+        <td><strong>Content-Type</strong></td>
+        <td><code>application/json</code></td>
+    </tr>
+    <tr>
+        <td><strong>Metodo HTTP</strong></td>
+        <td><code>POST</code> (todos los endpoints)</td>
+    </tr>
+    <tr>
+        <td><strong>Endpoints disponibles</strong></td>
+        <td><code>/sucursales</code> &middot; <code>/productos</code> &middot; <code>/tickets</code> &middot; <code>/personas</code></td>
+    </tr>
+</table>
+
+<div class="callout">
+    <strong>Importante:</strong> el token es <strong>confidencial</strong>. No debe compartirse por canales no seguros ni incluirse en repositorios de codigo publicos. En caso de compromiso, contactar inmediatamente al equipo CCR para regenerarlo.
+</div>
+
+<!-- 2. INTRODUCCION -->
+<h1>2. Introduccion y alcance</h1>
+
+<p>Este documento describe la API REST expuesta por <strong>CCR</strong> para recibir cargas de datos transaccionales y maestros desde el sistema POS del proveedor <strong>LT</strong>. La integracion permite a CCR consolidar informacion de ventas, productos, sucursales y compradores para sus reportes analiticos.</p>
+
+<p>La API esta orientada a procesos batch: el sistema LT envia lotes JSON via HTTP POST, y CCR los procesa con logica de <em>upsert</em> (insercion o actualizacion segun la clave unica de cada entidad).</p>
+
+<h3>Audiencia</h3>
+<ul>
+    <li><strong>Equipo tecnico de LT:</strong> implementadores de los procesos de envio.</li>
+    <li><strong>Equipo CCR:</strong> referencia funcional y operativa de la integracion.</li>
+</ul>
+
+<h3>Alcance</h3>
+<p>La especificacion cubre los cuatro endpoints disponibles para la carga de datos: <code>/sucursales</code>, <code>/productos</code>, <code>/tickets</code> y <code>/personas</code>. Incluye autenticacion, formato de mensajes, codigos de respuesta y ejemplos.</p>
+
+<h3>Convenciones</h3>
+<ul>
+    <li>Todos los textos en formato <code>codigo</code> deben copiarse literalmente.</li>
+    <li>Los ejemplos JSON son ilustrativos; los valores reales los provee el sistema LT.</li>
+    <li>Las claves marcadas como <strong>Requerido: Si</strong> son obligatorias para que el registro sea procesado.</li>
+</ul>
+
+<!-- 3. URL -->
+<h1>3. URL de servicio</h1>
+
+<p>La API esta disponible en la siguiente URL base de produccion:</p>
+
+<pre>http://200.108.131.206:8051/ccr-rest-api/lt/api/v1</pre>
+
+<div class="callout info">
+    <strong>Nota:</strong> Todos los endpoints documentados se ubican bajo esta URL base. Por ejemplo, <code>/sucursales</code> se invoca como <code>http://200.108.131.206:8051/ccr-rest-api/lt/api/v1/sucursales</code>.
+</div>
+
+<!-- 4. AUTENTICACION -->
+<h1>4. Autenticacion</h1>
+
+<p>Todos los endpoints requieren un <strong>Bearer Token estatico</strong> en la cabecera HTTP <code>Authorization</code>. CCR provee al proveedor LT una unica clave de acceso, valida para todos los endpoints.</p>
+
+<h3>Cabecera requerida</h3>
+<pre>Authorization: Bearer &lt;api-key&gt;</pre>
+
+<h3>Clave de acceso provista</h3>
+<pre>ltk_KFYQNxRAls24J46tSwndn68UYPfp9_SfyumbVCa9_es</pre>
+
+<div class="callout">
+    <strong>Importante:</strong> esta clave es <strong>confidencial</strong>. No debe compartirse por canales no seguros (chats publicos, repositorios de codigo, capturas en correos masivos). Debe almacenarse cifrada o en un gestor de secretos. En caso de compromiso, contactar inmediatamente al equipo CCR para regenerarla.
+</div>
+
+<h3>Respuesta ante autenticacion invalida</h3>
+<p>Si la cabecera <code>Authorization</code> esta ausente o la clave es incorrecta, la API responde <code>HTTP 401 Unauthorized</code> con el siguiente cuerpo:</p>
+<pre>{
+  "status": "ERROR",
+  "mensaje": "API key invalida",
+  "registros": 0
+}</pre>
+
+<!-- 5. FORMATO GENERAL -->
+<h1>5. Formato general de mensajes</h1>
+
+<h3>Cabeceras obligatorias</h3>
+<table>
+    <tr><th style="width:30%">Cabecera</th><th>Valor</th></tr>
+    <tr><td><code>Content-Type</code></td><td><code>application/json</code></td></tr>
+    <tr><td><code>Authorization</code></td><td><code>Bearer ltk_KFYQNxRAls24J46tSwndn68UYPfp9_SfyumbVCa9_es</code></td></tr>
+</table>
+
+<h3>Caracteristicas del request</h3>
+<ul>
+    <li><strong>Metodo HTTP:</strong> <code>POST</code> en todos los endpoints.</li>
+    <li><strong>Body:</strong> array JSON con uno o mas registros.</li>
+    <li><strong>Encoding:</strong> UTF-8.</li>
+</ul>
+
+<h3>Estructura de respuesta exitosa</h3>
+<p>Una respuesta correcta devuelve HTTP <code>200 OK</code> con el siguiente formato:</p>
+<pre>{
+  "status": "OK",
+  "mensaje": "Sucursales guardadas",
+  "registros": 10
+}</pre>
+
+<table>
+    <tr><th style="width:18%">Campo</th><th style="width:12%">Tipo</th><th>Descripcion</th></tr>
+    <tr><td><code>status</code></td><td>string</td><td><code>"OK"</code> si todo fue procesado correctamente.</td></tr>
+    <tr><td><code>mensaje</code></td><td>string</td><td>Descripcion legible del resultado.</td></tr>
+    <tr><td><code>registros</code></td><td>number</td><td>Cantidad de registros procesados.</td></tr>
+</table>
+
+<h3>Comportamiento de upsert</h3>
+<p>Si un registro ya existe en la base de datos (identificado por su clave unica), se <strong>actualiza</strong>. Si no existe, se <strong>inserta</strong>. <strong>No se generan duplicados al reenviar el mismo batch</strong>, lo que permite reintentos seguros.</p>
+
+<!-- 6. ENDPOINTS -->
+<h1>6. Endpoints</h1>
+
+<!-- 6.1 SUCURSALES -->
+<h2>6.1 <span class="method">POST</span><span class="endpoint-path">/sucursales</span></h2>
+
+<p>Carga o actualiza el maestro de sucursales (puntos de venta).</p>
+
+<p><strong>Clave unica:</strong> <code>punto</code></p>
+
+<h4>Body del request</h4>
+<pre>[
+  {
+    "punto": 1,
+    "direccion": "GRAL ELIZARDO AQUINO Y C.A. LOPEZ",
+    "provincia": "CENTRAL",
+    "ciudad": "ASUNCION",
+    "mts2": 250
+  },
+  {
+    "punto": 2,
+    "direccion": "Ruta 3 General Elizardo Aquino",
+    "provincia": "SIN ASIGNAR",
+    "ciudad": "SIN ASIGNAR",
+    "mts2": 0
+  }
+]</pre>
+
+<h4>Definicion de campos</h4>
+<table>
+    <tr><th style="width:18%">Campo</th><th style="width:12%">Tipo</th><th style="width:12%">Requerido</th><th>Descripcion</th></tr>
+    <tr><td><code>punto</code></td><td>integer</td><td>Si</td><td>ID unico de la sucursal.</td></tr>
+    <tr><td><code>direccion</code></td><td>string</td><td>No</td><td>Direccion fisica.</td></tr>
+    <tr><td><code>provincia</code></td><td>string</td><td>No</td><td>Provincia o departamento.</td></tr>
+    <tr><td><code>ciudad</code></td><td>string</td><td>No</td><td>Ciudad.</td></tr>
+    <tr><td><code>mts2</code></td><td>number</td><td>No</td><td>Superficie en metros cuadrados.</td></tr>
+</table>
+
+<h4>Respuesta exitosa</h4>
+<pre>{
+  "status": "OK",
+  "mensaje": "Sucursales guardadas",
+  "registros": 2
+}</pre>
+
+<!-- 6.2 PRODUCTOS -->
+<h2>6.2 <span class="method">POST</span><span class="endpoint-path">/productos</span></h2>
+
+<p>Carga o actualiza el catalogo de productos.</p>
+
+<p><strong>Clave unica:</strong> <code>eancode</code></p>
+
+<div class="callout">
+    <strong>Atencion:</strong> los campos <code>id_Sector</code>, <code>id_Seccion</code>, <code>id_Categoria</code> e <code>id_Subcategoria</code> deben enviarse exactamente con la primera letra en mayuscula (notacion camelCase mostrada en el ejemplo). Cualquier variacion sera ignorada.
+</div>
+
+<h4>Body del request</h4>
+<pre>[
+  {
+    "eancode": 247573,
+    "descripcion": "JGO 3PZC PLANGANA/COLADOR/TAPER REF:559688",
+    "id_Sector": 2,
+    "sector": "NO PERECEDEROS",
+    "id_Seccion": 14,
+    "seccion": "NO TRADICIONALES",
+    "id_Categoria": 96,
+    "categoria": "BAZAR",
+    "id_Subcategoria": 347,
+    "subcategoria": "PLASTICOS",
+    "fabricante": "FORTALEZA EMPRENDIMIENTO SRL",
+    "marca": "INDEFINIDA",
+    "contenido": 1,
+    "pesovolumen": 0,
+    "unidadMedida": "Unid"
+  }
+]</pre>
+
+<h4>Definicion de campos</h4>
+<table>
+    <tr><th style="width:22%">Campo</th><th style="width:12%">Tipo</th><th style="width:12%">Requerido</th><th>Descripcion</th></tr>
+    <tr><td><code>eancode</code></td><td>long</td><td>Si</td><td>Codigo EAN del producto. Puede superar el rango de int (32 bits).</td></tr>
+    <tr><td><code>descripcion</code></td><td>string</td><td>No</td><td>Descripcion del producto.</td></tr>
+    <tr><td><code>id_Sector</code></td><td>integer</td><td>No</td><td>ID del sector.</td></tr>
+    <tr><td><code>sector</code></td><td>string</td><td>No</td><td>Nombre del sector.</td></tr>
+    <tr><td><code>id_Seccion</code></td><td>integer</td><td>No</td><td>ID de la seccion.</td></tr>
+    <tr><td><code>seccion</code></td><td>string</td><td>No</td><td>Nombre de la seccion.</td></tr>
+    <tr><td><code>id_Categoria</code></td><td>integer</td><td>No</td><td>ID de la categoria.</td></tr>
+    <tr><td><code>categoria</code></td><td>string</td><td>No</td><td>Nombre de la categoria.</td></tr>
+    <tr><td><code>id_Subcategoria</code></td><td>integer</td><td>No</td><td>ID de la subcategoria.</td></tr>
+    <tr><td><code>subcategoria</code></td><td>string</td><td>No</td><td>Nombre de la subcategoria.</td></tr>
+    <tr><td><code>fabricante</code></td><td>string</td><td>No</td><td>Nombre del fabricante.</td></tr>
+    <tr><td><code>marca</code></td><td>string</td><td>No</td><td>Marca del producto.</td></tr>
+    <tr><td><code>contenido</code></td><td>number</td><td>No</td><td>Cantidad de contenido.</td></tr>
+    <tr><td><code>pesovolumen</code></td><td>number</td><td>No</td><td>Peso o volumen.</td></tr>
+    <tr><td><code>unidadMedida</code></td><td>string</td><td>No</td><td>Unidad de medida (ej.: <code>"Unid"</code>, <code>"Kg"</code>, <code>"Lt"</code>).</td></tr>
+</table>
+
+<h4>Respuesta exitosa</h4>
+<pre>{
+  "status": "OK",
+  "mensaje": "Productos guardados",
+  "registros": 1
+}</pre>
+
+<!-- 6.3 TICKETS -->
+<h2>6.3 <span class="method">POST</span><span class="endpoint-path">/tickets</span></h2>
+
+<p>Carga o actualiza las lineas de tickets de venta.</p>
+
+<p><strong>Clave unica:</strong> combinacion de <code>punto</code> + <code>nroTicket</code> + <code>eancode</code></p>
+
+<h4>Body del request</h4>
+<pre>[
+  {
+    "punto": 1,
+    "nroTicket": "0010120219942",
+    "fecha": "2026-05-05",
+    "hora": "19:14:00",
+    "eancode": 7500435019828,
+    "ean_desc": "2EN1 H&amp;S SUAVE Y MANEJ X 375ML",
+    "unidades_vendidas": 1,
+    "precio_regular": 43400,
+    "precio_promocional": 43400,
+    "tipo_venta": "P"
+  }
+]</pre>
+
+<h4>Definicion de campos</h4>
+<table>
+    <tr><th style="width:22%">Campo</th><th style="width:12%">Tipo</th><th style="width:12%">Requerido</th><th>Descripcion</th></tr>
+    <tr><td><code>punto</code></td><td>integer</td><td>Si</td><td>ID de la sucursal donde se realizo la venta.</td></tr>
+    <tr><td><code>nroTicket</code></td><td>string</td><td>Si</td><td>Numero de ticket.</td></tr>
+    <tr><td><code>fecha</code></td><td>string</td><td>Si</td><td>Fecha de la venta en formato <code>yyyy-MM-dd</code>.</td></tr>
+    <tr><td><code>hora</code></td><td>string</td><td>No</td><td>Hora de la venta en formato <code>HH:mm:ss</code>.</td></tr>
+    <tr><td><code>eancode</code></td><td>long</td><td>Si</td><td>Codigo EAN del producto vendido.</td></tr>
+    <tr><td><code>ean_desc</code></td><td>string</td><td>No</td><td>Descripcion del producto.</td></tr>
+    <tr><td><code>unidades_vendidas</code></td><td>integer</td><td>No</td><td>Cantidad de unidades vendidas.</td></tr>
+    <tr><td><code>precio_regular</code></td><td>number</td><td>No</td><td>Precio regular (sin promocion).</td></tr>
+    <tr><td><code>precio_promocional</code></td><td>number</td><td>No</td><td>Precio aplicado en la venta.</td></tr>
+    <tr><td><code>tipo_venta</code></td><td>string</td><td>No</td><td>Tipo de venta (ej.: <code>"P"</code> = promocional).</td></tr>
+</table>
+
+<h4>Respuesta exitosa</h4>
+<pre>{
+  "status": "OK",
+  "mensaje": "Tickets guardados",
+  "registros": 1
+}</pre>
+
+<!-- 6.4 PERSONAS -->
+<h2>6.4 <span class="method">POST</span><span class="endpoint-path">/personas</span></h2>
+
+<p>Carga o actualiza los compradores asociados a tickets.</p>
+
+<p><strong>Clave unica:</strong> combinacion de <code>punto</code> + <code>nroTicket</code> + <code>identificacion</code></p>
+
+<h4>Body del request</h4>
+<pre>[
+  {
+    "punto": 1,
+    "nroTicket": "0010010295677",
+    "fecha": "2026-05-05",
+    "identificacion": "44444401-7",
+    "nombreyapellidoempresa": "JUAN PEREZ"
+  }
+]</pre>
+
+<h4>Definicion de campos</h4>
+<table>
+    <tr><th style="width:25%">Campo</th><th style="width:12%">Tipo</th><th style="width:12%">Requerido</th><th>Descripcion</th></tr>
+    <tr><td><code>punto</code></td><td>integer</td><td>Si</td><td>ID de la sucursal.</td></tr>
+    <tr><td><code>nroTicket</code></td><td>string</td><td>Si</td><td>Numero de ticket al que pertenece la persona.</td></tr>
+    <tr><td><code>fecha</code></td><td>string</td><td>Si</td><td>Fecha del ticket en formato <code>yyyy-MM-dd</code>.</td></tr>
+    <tr><td><code>identificacion</code></td><td>string</td><td>No</td><td>Cedula o RUC del comprador.</td></tr>
+    <tr><td><code>nombreyapellidoempresa</code></td><td>string</td><td>No</td><td>Nombre completo o razon social.</td></tr>
+</table>
+
+<h4>Respuesta exitosa</h4>
+<pre>{
+  "status": "OK",
+  "mensaje": "Personas guardadas",
+  "registros": 1
+}</pre>
+
+<!-- 7. CODIGOS HTTP -->
+<h1>7. Codigos de respuesta HTTP</h1>
+
+<table>
+    <tr><th style="width:18%">Codigo</th><th>Descripcion</th></tr>
+    <tr><td><code>200 OK</code></td><td>Registros procesados correctamente.</td></tr>
+    <tr><td><code>400 Bad Request</code></td><td>JSON malformado o tipos de campo incorrectos.</td></tr>
+    <tr><td><code>401 Unauthorized</code></td><td>API key ausente o invalida.</td></tr>
+    <tr><td><code>500 Internal Server Error</code></td><td>Error interno del servidor.</td></tr>
+</table>
+
+<h3>7.1 Respuesta 200 (exito)</h3>
+<pre>{ "status": "OK", "mensaje": "Sucursales guardadas", "registros": 10 }</pre>
+
+<h3>7.2 Respuesta 401 (autenticacion invalida)</h3>
+<pre>{ "status": "ERROR", "mensaje": "API key invalida", "registros": 0 }</pre>
+
+<h3>7.3 Respuesta 400 (JSON invalido)</h3>
+<p>El error 400 usa el formato estandar de Spring Boot &mdash; distinto al formato de negocio de los otros endpoints:</p>
+<pre>{
+  "timestamp": "2026-05-21T22:01:59.741+00:00",
+  "status": 400,
+  "error": "Bad Request",
+  "message": "JSON parse error: ...",
+  "path": "/ccr-rest-api/lt/api/v1/sucursales"
+}</pre>
+
+<!-- 8. CURL -->
+<h1>8. Ejemplo completo con curl</h1>
+
+<p>A continuacion se muestra una invocacion completa al endpoint <code>/sucursales</code>, util para probar la integracion antes de la primera carga real.</p>
+
+<h3>Request</h3>
+<pre>curl -X POST http://200.108.131.206:8051/ccr-rest-api/lt/api/v1/sucursales \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer ltk_KFYQNxRAls24J46tSwndn68UYPfp9_SfyumbVCa9_es" \
+  -d '[
+    {
+      "punto": 1,
+      "direccion": "GRAL ELIZARDO AQUINO Y C.A. LOPEZ",
+      "provincia": "CENTRAL",
+      "ciudad": "ASUNCION",
+      "mts2": 250
+    }
+  ]'</pre>
+
+<h3>Response</h3>
+<pre>{
+  "status": "OK",
+  "mensaje": "Sucursales guardadas",
+  "registros": 1
+}</pre>
+
+<!-- 9. NOTAS TECNICAS -->
+<h1>9. Notas tecnicas y recomendaciones</h1>
+
+<ul>
+    <li><strong>Orden de envio:</strong> los batches pueden enviarse en cualquier orden. Se recomienda, no obstante, enviar primero <code>sucursales</code> y <code>productos</code>, y luego <code>tickets</code> y <code>personas</code>, para garantizar integridad referencial visual al consultar los datos.</li>
+    <li><strong>Tamaño de batch:</strong> no hay un limite estricto, pero se recomienda <strong>no superar 5.000 registros por llamada</strong> para evitar timeouts y minimizar el impacto en caso de error.</li>
+    <li><strong>Reintentos:</strong> dado el comportamiento de upsert, los batches son idempotentes. En caso de error de red o timeout, el mismo batch puede reenviarse sin riesgo de duplicacion.</li>
+    <li><strong>Tipos numericos:</strong> el campo <code>eancode</code> debe enviarse como <strong>numero entero largo</strong> (no string). Valores como <code>7500435019828</code> superan el rango de <code>int</code> estandar de 32 bits.</li>
+    <li><strong>Fechas y horas:</strong> deben enviarse siempre en formato ISO 8601: fechas como <code>yyyy-MM-dd</code> y horas como <code>HH:mm:ss</code>.</li>
+    <li><strong>Campos opcionales:</strong> pueden omitirse del JSON o enviarse como <code>null</code>.</li>
+    <li><strong>Zona horaria:</strong> las fechas y horas se interpretan en zona horaria de Paraguay (America/Asuncion).</li>
+    <li><strong>Encoding:</strong> usar siempre UTF-8 para evitar problemas con acentos y caracteres especiales en descripciones y nombres.</li>
+</ul>
+
+<!-- 10. SOPORTE -->
+<h1>10. Soporte y contacto</h1>
+
+<p>Para consultas tecnicas, reporte de incidentes o solicitudes de regeneracion de la clave de acceso, contactar al equipo de integracion:</p>
+
+<table>
+    <tr><th style="width:30%">Contacto</th><th>Datos</th></tr>
+    <tr><td>Responsable tecnico</td><td>D-Tech Consulting</td></tr>
+    <tr><td>Email</td><td>jaimeferreira11@gmail.com</td></tr>
+    <tr><td>Horario de soporte</td><td>Lunes a viernes, 08:00 &ndash; 18:00 (GMT-3)</td></tr>
+</table>
+
+<div class="callout info">
+    <strong>Antes de contactar soporte,</strong> verificar que el problema persiste con la URL correcta, la cabecera <code>Authorization</code> presente, el <code>Content-Type</code> correcto y un JSON valido. La mayoria de los errores reportados corresponden a alguno de estos cuatro puntos.
+</div>
+
+<div class="footer-note">
+    Documento generado el 31 de mayo de 2026 &middot; Version 1.0 &middot; CCR Paraguay &middot; Confidencial
+</div>
+
+</body>
+</html>
