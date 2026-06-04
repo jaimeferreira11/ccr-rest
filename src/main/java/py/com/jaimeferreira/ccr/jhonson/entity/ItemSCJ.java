@@ -34,6 +34,9 @@ public class ItemSCJ implements Serializable {
     @Column(name = "ID")
     private Long id;
 
+    @Column(name = "codigo")
+    private Integer codigo;
+
     @Size(max = 300)
     @Column(name = "LEYENDA", length = 300)
     private String leyenda;
@@ -84,6 +87,14 @@ public class ItemSCJ implements Serializable {
 
     public void setId(Long id) {
         this.id = id;
+    }
+
+    public Integer getCodigo() {
+        return codigo;
+    }
+
+    public void setCodigo(Integer codigo) {
+        this.codigo = codigo;
     }
 
     public String getDescripcion() {

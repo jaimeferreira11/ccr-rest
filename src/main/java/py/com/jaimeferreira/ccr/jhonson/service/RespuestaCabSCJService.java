@@ -1,7 +1,9 @@
 
 package py.com.jaimeferreira.ccr.jhonson.service;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -11,8 +13,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import py.com.jaimeferreira.ccr.commons.util.ManejadorDeArchivos;
+import py.com.jaimeferreira.ccr.jhonson.constants.ConstantsSCJ;
+import py.com.jaimeferreira.ccr.jhonson.entity.ItemSCJ;
 import py.com.jaimeferreira.ccr.jhonson.entity.RespuestaCabSCJ;
 import py.com.jaimeferreira.ccr.jhonson.entity.RespuestaDetSCJ;
+import py.com.jaimeferreira.ccr.jhonson.repository.ItemsSCJRepository;
 import py.com.jaimeferreira.ccr.jhonson.repository.RespuestaCabSCJRepository;
 import py.com.jaimeferreira.ccr.jhonson.repository.RespuestaDetSCJRepository;
 import py.com.jaimeferreira.ccr.jhonson.repository.RespuestaImagenSCJRepository;
@@ -35,6 +40,9 @@ public class RespuestaCabSCJService {
 
     @Autowired
     RespuestaImagenSCJRepository imagenRepository;
+
+    @Autowired
+    ItemsSCJRepository itemsRepository;
 
     @Autowired
     private ManejadorDeArchivos manejadorDeArchivos;
@@ -68,8 +76,37 @@ public class RespuestaCabSCJService {
             RespuestaCabSCJ cab = repository.save(r);
 
             // detalles
-            r.getDetalles().stream().forEach(d -> {
+            List<RespuestaDetSCJ> detalles = r.getDetalles();
+
+            // Resolver cod_item desde items SOLO para los detalles que la app no envió ya con código.
+            // Un único query (findAllById) para evitar N consultas.
+            List<Long> idsSinCodigo = detalles.stream()
+                .filter(d -> d.getCodItem() == null && d.getIdItem() != null)
+                .map(RespuestaDetSCJ::getIdItem)
+                .distinct()
+                .collect(Collectors.toList());
+
+            Map<Long, Integer> codigoPorItem = new HashMap<>();
+            if (!idsSinCodigo.isEmpty()) {
+                for (ItemSCJ item : itemsRepository.findAllById(idsSinCodigo)) {
+                    if (item.getCodigo() != null) {
+                        codigoPorItem.put(item.getId(), item.getCodigo());
+                    }
+                }
+            }
+
+            detalles.forEach(d -> {
                 d.setIdRespuestaCab(cab.getId());
+
+                // cod_item: respetar el que mandó la app; si no vino, resolverlo desde items.
+                if (d.getCodItem() == null && d.getIdItem() != null) {
+                    d.setCodItem(codigoPorItem.get(d.getIdItem()));
+                }
+
+                // "Sin Exhibición": normalizar el texto del ítem especial (id 297).
+                if (d.getIdItem() != null && d.getIdItem() == ConstantsSCJ.ID_ITEM_SIN_EXHIBICION) {
+                    d.setDescItem("Sin Exhibición");
+                }
 
                 detRepository.save(d);
 

@@ -36,6 +36,9 @@ public class RespuestaDetSCJ implements Serializable {
     @Column(name = "ID_ITEM", nullable = false)
     private Long idItem;
 
+    @Column(name = "cod_item")
+    private Integer codItem;
+
     @NotNull
     @Size(max = 200)
     @Column(name = "DESC_ITEM", nullable = false, length = 200)
@@ -93,6 +96,14 @@ public class RespuestaDetSCJ implements Serializable {
 
     public void setIdItem(Long idItem) {
         this.idItem = idItem;
+    }
+
+    public Integer getCodItem() {
+        return codItem;
+    }
+
+    public void setCodItem(Integer codItem) {
+        this.codItem = codItem;
     }
 
     public String getDescItem() {
