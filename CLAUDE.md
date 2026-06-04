@@ -91,6 +91,7 @@ PostgreSQL, schema `ccr`. DDL is managed manually via SQL scripts in `src/main/r
 5. `07-jhonson-app-tablas.sql`, `08-jhonson-boca-auditor.sql`
 6. `09-cotizacion.sql`
 7. `10-lt-integration-schema.sql`
+8. `11-auditoria-insights.sql`
 
 `init_schema_completo.sql` is a consolidated bootstrap script; `multi_cliente_tablas.sql` and `dpresent_tablas_nestle.sql` cover the multi-cliente / d-present surface.
 
