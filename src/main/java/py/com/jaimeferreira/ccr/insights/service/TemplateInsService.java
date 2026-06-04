@@ -168,12 +168,87 @@ public class TemplateInsService {
     /**
      * Elimina todas las filas de datos (preservando el header en fila 0) de una hoja.
      *
+     * <p>Usa una eliminación masiva en O(n) (ver {@link #limpiarDatosHojaRapido}).
+     * El antiguo bucle {@code sheet.removeRow()} es O(n²) — cada llamada recorre el
+     * {@code TreeMap} interno ({@code headMap().size()}), reubica el array XML
+     * ({@code sheetData.removeRow(idx)}) y escanea todos los comentarios. Sobre las
+     * hojas FACT / Total Empresa (~205.000 filas) eso tardaba decenas de minutos;
+     * la vía rápida baja a menos de 1 segundo por hoja.</p>
+     *
      * @return cantidad de filas eliminadas
      */
     private int limpiarDatosHoja(XSSFSheet sheet) {
         int lastRow = sheet.getLastRowNum();
         if (lastRow < 1) return 0;
 
+        int removed;
+        try {
+            removed = limpiarDatosHojaRapido(sheet);
+        } catch (Exception e) {
+            // Ante cualquier incompatibilidad con los internos de POI, caer al
+            // método estándar (lento pero correcto) para no romper la subida.
+            LOGGER.warn("  Hoja '{}': vía rápida no disponible ({}), usando método estándar.",
+                    sheet.getSheetName(), e.toString());
+            removed = limpiarDatosHojaLento(sheet);
+        }
+        LOGGER.info("  Hoja '{}': eliminadas {} filas de datos.", sheet.getSheetName(), removed);
+        return removed;
+    }
+
+    /**
+     * Eliminación masiva de filas de datos en O(n), preservando el header (fila 0).
+     *
+     * <p>Hay que limpiar las dos estructuras que mantiene XSSFSheet en sincronía:</p>
+     * <ol>
+     *   <li>El cache interno {@code _rows} (un {@code SortedMap<Integer,XSSFRow>}):
+     *       {@code XSSFSheet.write()} lo recorre invocando {@code onDocumentWrite()}
+     *       en cada fila. Si se vacía solo el bean XML, las filas quedan huérfanas y
+     *       al guardar se lanza {@code XmlValueDisconnectedException}.</li>
+     *   <li>El bean XML {@code <sheetData>}: es lo que realmente se serializa. Se
+     *       recorre con un {@code XmlCursor} (mantiene posición → O(n)); usar
+     *       {@code setRowArray()} o {@code removeRow(idx)} es O(n²) porque XmlBeans
+     *       reubica/navega el array en cada operación.</li>
+     * </ol>
+     *
+     * @return cantidad de filas de datos eliminadas
+     */
+    @SuppressWarnings("unchecked")
+    private int limpiarDatosHojaRapido(XSSFSheet sheet) throws Exception {
+        // 1. Cache _rows -> dejar solo el header (fila 0).
+        java.lang.reflect.Field field = XSSFSheet.class.getDeclaredField("_rows");
+        field.setAccessible(true);
+        java.util.SortedMap<Integer, XSSFRow> rows =
+                (java.util.SortedMap<Integer, XSSFRow>) field.get(sheet);
+        XSSFRow header = rows.get(0);
+        rows.clear();
+        if (header != null) {
+            rows.put(0, header);
+        }
+
+        // 2. Bean <sheetData> -> dejar solo el primer <row> (header), recorriendo en O(n).
+        org.openxmlformats.schemas.spreadsheetml.x2006.main.CTSheetData data =
+                sheet.getCTWorksheet().getSheetData();
+        int removed = 0;
+        XmlCursor cursor = data.newCursor();
+        try {
+            if (cursor.toFirstChild()) {            // header <row>
+                while (cursor.toNextSibling()) {    // siguiente <row> de datos
+                    cursor.removeXml();
+                    removed++;
+                }
+            }
+        } finally {
+            cursor.dispose();
+        }
+        return removed;
+    }
+
+    /**
+     * Método estándar de eliminación fila por fila (O(n²)).
+     * Sólo se usa como respaldo si la vía rápida falla por incompatibilidad de POI.
+     */
+    private int limpiarDatosHojaLento(XSSFSheet sheet) {
+        int lastRow = sheet.getLastRowNum();
         int removed = 0;
         for (int i = lastRow; i >= 1; i--) {
             XSSFRow row = sheet.getRow(i);
@@ -182,7 +257,6 @@ public class TemplateInsService {
                 removed++;
             }
         }
-        LOGGER.info("  Hoja '{}': eliminadas {} filas de datos.", sheet.getSheetName(), removed);
         return removed;
     }
 
