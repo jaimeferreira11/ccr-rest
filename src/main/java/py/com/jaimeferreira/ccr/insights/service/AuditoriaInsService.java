@@ -5,8 +5,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import py.com.jaimeferreira.ccr.insights.dto.AuditoriaDTO;
+import py.com.jaimeferreira.ccr.insights.dto.AuditoriaPageDTO;
+import py.com.jaimeferreira.ccr.insights.dto.EventoCatalogoDTO;
 import py.com.jaimeferreira.ccr.insights.entity.AuditoriaIns;
 import py.com.jaimeferreira.ccr.insights.entity.EventoAuditoriaIns;
 import py.com.jaimeferreira.ccr.insights.entity.ResultadoAuditoria;
@@ -14,7 +19,10 @@ import py.com.jaimeferreira.ccr.insights.entity.TipoReporte;
 import py.com.jaimeferreira.ccr.insights.repository.AuditoriaInsRepository;
 
 import java.time.LocalDateTime;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * Registra eventos de auditoría del módulo Insights.
@@ -62,6 +70,53 @@ public class AuditoriaInsService {
             LOGGER.warn("No se pudo registrar auditoría [{}/{}] cliente={}: {}",
                     evento, resultado, codCliente, e.toString());
         }
+    }
+
+    /**
+     * Lista registros de auditoría paginados y filtrados (server-side), ordenados
+     * por fecha-hora descendente. Ramifica por combinación de filtros, igual que
+     * {@code InformeInsService.findUltimos}.
+     *
+     * @param evento     filtro por evento (null = todos)
+     * @param codCliente filtro por cliente normalizado (null/vacío = todos)
+     * @param page       página base 0
+     * @param size       tamaño de página
+     */
+    public AuditoriaPageDTO listar(EventoAuditoriaIns evento, String codCliente, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        boolean tieneCliente = codCliente != null && !codCliente.isEmpty();
+        boolean tieneEvento = evento != null;
+
+        long totalElements;
+        List<AuditoriaIns> registros;
+
+        if (tieneEvento && tieneCliente) {
+            totalElements = auditoriaInsRepository.countByEventoAndCodCliente(evento, codCliente);
+            registros = auditoriaInsRepository.findByEventoAndCodClienteOrderByFechaHoraDesc(evento, codCliente, pageable);
+        } else if (tieneCliente) {
+            totalElements = auditoriaInsRepository.countByCodCliente(codCliente);
+            registros = auditoriaInsRepository.findByCodClienteOrderByFechaHoraDesc(codCliente, pageable);
+        } else if (tieneEvento) {
+            totalElements = auditoriaInsRepository.countByEvento(evento);
+            registros = auditoriaInsRepository.findByEventoOrderByFechaHoraDesc(evento, pageable);
+        } else {
+            totalElements = auditoriaInsRepository.count();
+            registros = auditoriaInsRepository.findAllByOrderByFechaHoraDesc(pageable);
+        }
+
+        List<AuditoriaDTO> content = registros.stream()
+                .map(AuditoriaDTO::from)
+                .collect(Collectors.toList());
+        return new AuditoriaPageDTO(content, totalElements);
+    }
+
+    /**
+     * Catálogo de eventos auditables (para poblar el filtro de la pantalla).
+     */
+    public List<EventoCatalogoDTO> listarEventos() {
+        return Arrays.stream(EventoAuditoriaIns.values())
+                .map(EventoCatalogoDTO::from)
+                .collect(Collectors.toList());
     }
 
     private String serializar(Map<String, Object> detalle) {
