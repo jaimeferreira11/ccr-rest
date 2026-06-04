@@ -41,6 +41,10 @@ import py.com.jaimeferreira.ccr.insights.dto.PaisDTO;
 import py.com.jaimeferreira.ccr.insights.service.CategoriaService;
 import py.com.jaimeferreira.ccr.insights.service.ClienteInsService;
 import py.com.jaimeferreira.ccr.insights.service.PaisInsService;
+import py.com.jaimeferreira.ccr.insights.entity.EventoAuditoriaIns;
+import py.com.jaimeferreira.ccr.insights.entity.ResultadoAuditoria;
+import py.com.jaimeferreira.ccr.insights.service.AuditoriaInsService;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -82,6 +86,9 @@ public class AdminPlataformaController {
 
     @Autowired
     private CategoriaService categoriaService;
+
+    @Autowired
+    private AuditoriaInsService auditoriaInsService;
 
     @Autowired
     private LogStreamService logStreamService;
@@ -223,44 +230,79 @@ public class AdminPlataformaController {
             throw new UnknownResourceException("Debe adjuntar al menos un archivo.");
         }
 
-        clienteInsService.findByCodigo(codCliente.trim().toUpperCase());
+        String codClienteNorm = codCliente.trim().toUpperCase();
+        clienteInsService.findByCodigo(codClienteNorm);
 
         Map<String, String> response = new HashMap<>();
 
         if (hayTemplate) {
-            if (tipoReporte == null || tipoReporte.trim().isEmpty()) {
-                throw new UnknownResourceException("Debe indicar el tipo de reporte (NORMAL o CADENA) al subir un template.");
-            }
-            if (codCategoria == null || codCategoria.trim().isEmpty()) {
-                throw new UnknownResourceException("Debe indicar el código de categoría al subir un template.");
-            }
-            TipoReporte tipo;
+            long t0 = System.currentTimeMillis();
+            String codCategoriaNorm = (codCategoria == null) ? null : codCategoria.trim().toUpperCase();
+            TipoReporte tipo = null;
             try {
-                tipo = TipoReporte.valueOf(tipoReporte.trim().toUpperCase());
-            } catch (IllegalArgumentException e) {
-                throw new UnknownResourceException("Tipo de reporte inválido: " + tipoReporte
-                        + ". Valores válidos: NORMAL, CADENA");
+                if (tipoReporte == null || tipoReporte.trim().isEmpty()) {
+                    throw new UnknownResourceException("Debe indicar el tipo de reporte (NORMAL o CADENA) al subir un template.");
+                }
+                if (codCategoria == null || codCategoria.trim().isEmpty()) {
+                    throw new UnknownResourceException("Debe indicar el código de categoría al subir un template.");
+                }
+                try {
+                    tipo = TipoReporte.valueOf(tipoReporte.trim().toUpperCase());
+                } catch (IllegalArgumentException e) {
+                    throw new UnknownResourceException("Tipo de reporte inválido: " + tipoReporte
+                            + ". Valores válidos: NORMAL, CADENA");
+                }
+                String nombreArchivo = templateInsService.guardarTemplate(template, codClienteNorm, codCategoriaNorm, tipo, sanitizar);
+                response.put("template", nombreArchivo + " guardado correctamente");
+                LOGGER.info("Template guardado para cliente: {}, categoria: {}", codClienteNorm, codCategoriaNorm);
+                auditar(EventoAuditoriaIns.TEMPLATE_SUBIDO, ResultadoAuditoria.EXITO, codClienteNorm, codCategoriaNorm, tipo,
+                        detalle("nombreArchivo", nombreArchivo, "sanitizar", sanitizar,
+                                "duracionMs", System.currentTimeMillis() - t0));
+            } catch (RuntimeException e) {
+                auditar(EventoAuditoriaIns.TEMPLATE_SUBIDO, ResultadoAuditoria.ERROR, codClienteNorm, codCategoriaNorm, tipo,
+                        detalle("mensajeError", e.getMessage(),
+                                "duracionMs", System.currentTimeMillis() - t0));
+                throw e;
             }
-            String nombreArchivo = templateInsService.guardarTemplate(template, codCliente, codCategoria.trim().toUpperCase(), tipo, sanitizar);
-            response.put("template", nombreArchivo + " guardado correctamente");
-            LOGGER.info("Template guardado para cliente: {}, categoria: {}", codCliente, codCategoria);
         }
 
         if (hayFiltros) {
-            validarCsv(csvFiltrosBase, "filtros base");
-            reporteInsService.guardarArchivoBase(csvFiltrosBase, codCliente, "filtros_base.csv");
-            response.put("filtrosBase", "filtros_base.csv guardado correctamente");
-            LOGGER.info("Filtros base guardados para cliente: {}", codCliente);
+            long t0 = System.currentTimeMillis();
+            try {
+                validarCsv(csvFiltrosBase, "filtros base");
+                reporteInsService.guardarArchivoBase(csvFiltrosBase, codClienteNorm, "filtros_base.csv");
+                response.put("filtrosBase", "filtros_base.csv guardado correctamente");
+                LOGGER.info("Filtros base guardados para cliente: {}", codClienteNorm);
+                auditar(EventoAuditoriaIns.FILTROS_BASE_SUBIDO, ResultadoAuditoria.EXITO, codClienteNorm, null, null,
+                        detalle("nombreArchivo", "filtros_base.csv",
+                                "duracionMs", System.currentTimeMillis() - t0));
+            } catch (RuntimeException e) {
+                auditar(EventoAuditoriaIns.FILTROS_BASE_SUBIDO, ResultadoAuditoria.ERROR, codClienteNorm, null, null,
+                        detalle("mensajeError", e.getMessage(),
+                                "duracionMs", System.currentTimeMillis() - t0));
+                throw e;
+            }
         }
 
         if (hayDatos) {
-            validarCsv(csvDatosBase, "datos base");
-            reporteInsService.guardarArchivoBase(csvDatosBase, codCliente, "datos_base.csv");
-            response.put("datosBase", "datos_base.csv guardado correctamente");
-            LOGGER.info("Datos base guardados para cliente: {}", codCliente);
+            long t0 = System.currentTimeMillis();
+            try {
+                validarCsv(csvDatosBase, "datos base");
+                reporteInsService.guardarArchivoBase(csvDatosBase, codClienteNorm, "datos_base.csv");
+                response.put("datosBase", "datos_base.csv guardado correctamente");
+                LOGGER.info("Datos base guardados para cliente: {}", codClienteNorm);
+                auditar(EventoAuditoriaIns.DATOS_BASE_SUBIDO, ResultadoAuditoria.EXITO, codClienteNorm, null, null,
+                        detalle("nombreArchivo", "datos_base.csv",
+                                "duracionMs", System.currentTimeMillis() - t0));
+            } catch (RuntimeException e) {
+                auditar(EventoAuditoriaIns.DATOS_BASE_SUBIDO, ResultadoAuditoria.ERROR, codClienteNorm, null, null,
+                        detalle("mensajeError", e.getMessage(),
+                                "duracionMs", System.currentTimeMillis() - t0));
+                throw e;
+            }
         }
 
-        response.put("cliente", codCliente.trim().toUpperCase());
+        response.put("cliente", codClienteNorm);
         response.put("mensaje", "Archivos base guardados correctamente");
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
@@ -291,7 +333,19 @@ public class AdminPlataformaController {
                     + ". Valores válidos: NORMAL, CADENA");
         }
 
-        String resultado = reporteInsService.eliminarDatosBase(codClienteNorm, tipo);
+        String resultado;
+        long t0 = System.currentTimeMillis();
+        try {
+            resultado = reporteInsService.eliminarDatosBase(codClienteNorm, tipo);
+            auditar(EventoAuditoriaIns.DATOS_BASE_ELIMINADO, ResultadoAuditoria.EXITO, codClienteNorm, null, tipo,
+                    detalle("resultadoDetalle", resultado,
+                            "duracionMs", System.currentTimeMillis() - t0));
+        } catch (RuntimeException e) {
+            auditar(EventoAuditoriaIns.DATOS_BASE_ELIMINADO, ResultadoAuditoria.ERROR, codClienteNorm, null, tipo,
+                    detalle("mensajeError", e.getMessage(),
+                            "duracionMs", System.currentTimeMillis() - t0));
+            throw e;
+        }
 
         Map<String, String> response = new HashMap<>();
         response.put("cliente", codClienteNorm);
@@ -467,5 +521,29 @@ public class AdminPlataformaController {
         if (nombre == null || !nombre.toLowerCase().endsWith(".csv")) {
             throw new UnknownResourceException("El archivo de " + descripcion + " debe ser un CSV (.csv).");
         }
+    }
+
+    /**
+     * Registra un evento de auditoría tomando el usuario del contexto de seguridad.
+     * Delega en {@link AuditoriaInsService} (best-effort, no rompe la operación).
+     */
+    private void auditar(EventoAuditoriaIns evento, ResultadoAuditoria resultado, String codCliente,
+                         String codCategoria, TipoReporte tipoReporte, Map<String, Object> detalle) {
+        String usuario = SecurityContextHolder.getContext().getAuthentication().getName();
+        auditoriaInsService.registrar(evento, resultado, usuario, codCliente, codCategoria, tipoReporte, detalle);
+    }
+
+    /**
+     * Construye un mapa de detalle a partir de pares clave/valor (clave1, valor1, clave2, valor2, ...).
+     * Las entradas con valor null se omiten. Java 8 (sin Map.of).
+     */
+    private static Map<String, Object> detalle(Object... kv) {
+        Map<String, Object> mapa = new LinkedHashMap<>();
+        for (int i = 0; i + 1 < kv.length; i += 2) {
+            if (kv[i] != null && kv[i + 1] != null) {
+                mapa.put(String.valueOf(kv[i]), kv[i + 1]);
+            }
+        }
+        return mapa;
     }
 }
