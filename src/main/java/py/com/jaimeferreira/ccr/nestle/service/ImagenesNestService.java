@@ -380,7 +380,7 @@ public class ImagenesNestService {
             throw new UnknownResourceException("Archivo no existe: " + pathRelativo);
         }
         try {
-            manejadorDeArchivos.rotateImage(pathRelativo);
+            manejadorDeArchivos.rotateImage(pathRelativo, -90);
         } catch (Exception e) {
             LOGGER.error("Error rotando imagen " + pathRelativo, e);
             throw new RuntimeException("No se pudo rotar la imagen", e);

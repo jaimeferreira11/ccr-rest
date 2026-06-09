@@ -19,7 +19,10 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import py.com.jaimeferreira.ccr.commons.dto.ImagenAdminDTO;
+import py.com.jaimeferreira.ccr.commons.dto.MoverResultado;
+import py.com.jaimeferreira.ccr.commons.exception.ArchivoExistenteException;
 import py.com.jaimeferreira.ccr.commons.exception.UnknownResourceException;
+import py.com.jaimeferreira.ccr.commons.service.ImagenExplorerService;
 import py.com.jaimeferreira.ccr.commons.util.ImagenPathValidator;
 import py.com.jaimeferreira.ccr.jhonson.service.ImagenesSCJService;
 import py.com.jaimeferreira.ccr.nestle.service.ImagenesNestService;
@@ -39,6 +42,9 @@ public class AdminImagenesController {
 
     @Autowired
     private ImagenesShellService imagenesShellService;
+
+    @Autowired
+    private ImagenExplorerService imagenExplorerService;
 
     @GetMapping(value = "/listar", produces = "application/json")
     public ResponseEntity<?> listar(
@@ -129,6 +135,50 @@ public class AdminImagenesController {
         resp.put("path", path);
         resp.put("urlPublica", buildUrlBinario(brand.toLowerCase(), path, cb));
         return ResponseEntity.ok(resp);
+    }
+
+    @GetMapping(value = "/explorar", produces = "application/json")
+    public ResponseEntity<?> explorar(@RequestParam(value = "path", required = false) String path) {
+        try {
+            return ResponseEntity.ok(imagenExplorerService.explorar(path));
+        } catch (UnknownResourceException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error(e.getMessage()));
+        } catch (IllegalArgumentException e) {
+            LOGGER.warn("Explorar path inválido. path={}, error={}", path, e.getMessage());
+            return ResponseEntity.badRequest().body(error(e.getMessage()));
+        } catch (Exception e) {
+            LOGGER.error("Error explorando path=" + path, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(error("No se pudo explorar la carpeta"));
+        }
+    }
+
+    @PostMapping(value = "/mover", produces = "application/json", consumes = "application/json")
+    public ResponseEntity<?> mover(@RequestBody Map<String, String> body) {
+        String origenPath = body.get("origenPath");
+        String destinoDir = body.get("destinoDir");
+
+        try {
+            MoverResultado resultado = imagenExplorerService.mover(origenPath, destinoDir);
+            Map<String, String> resp = new HashMap<>();
+            resp.put("pathRelativo", resultado.getPathRelativo());
+            if (resultado.getBrand() != null) {
+                long cb = System.currentTimeMillis();
+                resp.put("urlPublica", buildUrlBinario(resultado.getBrand(), resultado.getPathRelativo(), cb));
+            }
+            return ResponseEntity.ok(resp);
+        } catch (ArchivoExistenteException e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(error(e.getMessage()));
+        } catch (UnknownResourceException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error(e.getMessage()));
+        } catch (IllegalArgumentException e) {
+            LOGGER.warn("Mover rechazado. origen={}, destino={}, error={}", origenPath, destinoDir, e.getMessage());
+            return ResponseEntity.badRequest().body(error(e.getMessage()));
+        } catch (Exception e) {
+            LOGGER.error("Error moviendo origen=" + origenPath + " destino=" + destinoDir, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(error("No se pudo mover la imagen"));
+        }
     }
 
     private String buildUrlBinario(String brand, String path, long cacheBuster) {

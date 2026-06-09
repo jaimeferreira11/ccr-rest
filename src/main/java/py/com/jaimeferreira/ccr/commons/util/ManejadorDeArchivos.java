@@ -405,31 +405,20 @@ public class ManejadorDeArchivos {
     }
 
     public void rotateImage(String imgPath) throws IOException {
-        
-//        File file = null;
+        // Sentido por defecto (90° CW), usado por el endpoint público /images/rotate.
+        rotateImage(imgPath, 90);
+    }
+
+    public void rotateImage(String imgPath, int angle) throws IOException {
         String sFile = directoryMainImages.concat(imgPath);
-//        FileInputStream fileStream = new FileInputStream(file = new File(sFile));
-        
+
         LOGGER.info(sFile);
-        
+
         // Cargar la imagen desde el archivo
         BufferedImage originalImage = ImageIO.read(new File(sFile));
-        
-//        rotateImage(originalImage, 90);
-//
-//        // Rotar 90 grados
-//        int width = originalImage.getWidth();
-//        int height = originalImage.getHeight();
-//        BufferedImage rotatedImage = new BufferedImage(height, width, originalImage.getType());
-//
-//        Graphics2D g2d = rotatedImage.createGraphics();
-//        g2d.rotate(Math.toRadians(90), height / 2.0, height / 2.0);
-//        g2d.translate((height - width) / 2.0, (height - width) / 2.0);
-//        g2d.drawImage(originalImage, 0, 0, null);
-//        g2d.dispose();
 
         // Guardar la imagen rotada
-        ImageIO.write(rotateImage(originalImage, 90), "jpg", new File(sFile));
+        ImageIO.write(rotateImage(originalImage, angle), "jpg", new File(sFile));
     }
 
 }
