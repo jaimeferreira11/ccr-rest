@@ -1,0 +1,170 @@
+{
+	"info": {
+		"_postman_id": "b3f1c7a2-9d4e-4a1b-8c6f-1a2b3c4d5e6f",
+		"name": "CCR - Integración LT",
+		"description": "Colección para el intercambio automatizado de datos con la API REST de CCR (módulo LT).\n\nEndpoints disponibles (todos POST, body = array JSON):\n- /sucursales\n- /productos\n- /tickets\n- /personas\n\nAutenticación: header `Authorization: Bearer <api-key>` en cada request.\n\nNota: si un registro ya existe (por su clave única) se actualiza; si no, se inserta. Reenviar el mismo batch no genera duplicados.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "POST /sucursales",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer ltk_KFYQNxRAls24J46tSwndn68UYPfp9_SfyumbVCa9_es"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "[\n  {\n    \"punto\": 101,\n    \"direccion\": \"Av. España 1234\",\n    \"provincia\": \"Central\",\n    \"ciudad\": \"Asunción\",\n    \"mts2\": 850.50\n  },\n  {\n    \"punto\": 102,\n    \"direccion\": \"Ruta 2 Km 18\",\n    \"provincia\": \"Central\",\n    \"ciudad\": \"San Lorenzo\",\n    \"mts2\": 1200.00\n  }\n]"
+				},
+				"url": {
+					"raw": "http://200.108.131.206:8051/ccr-rest-api/lt/api/v1/sucursales",
+					"protocol": "http",
+					"host": [
+						"200",
+						"108",
+						"131",
+						"206"
+					],
+					"port": "8051",
+					"path": [
+						"ccr-rest-api",
+						"lt",
+						"api",
+						"v1",
+						"sucursales"
+					]
+				},
+				"description": "Carga o actualiza el catálogo de sucursales (puntos de venta). Clave única: `punto`."
+			},
+			"response": []
+		},
+		{
+			"name": "POST /productos",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer ltk_KFYQNxRAls24J46tSwndn68UYPfp9_SfyumbVCa9_es"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "[\n  {\n    \"eancode\": 7790001234567,\n    \"descripcion\": \"Gaseosa Cola 1.5L\",\n    \"id_Sector\": 1,\n    \"sector\": \"Bebidas\",\n    \"id_Seccion\": 10,\n    \"seccion\": \"Gaseosas\",\n    \"id_Categoria\": 100,\n    \"categoria\": \"Colas\",\n    \"id_Subcategoria\": 1001,\n    \"subcategoria\": \"Cola Regular\",\n    \"fabricante\": \"Embotelladora SA\",\n    \"marca\": \"MarcaCola\",\n    \"contenido\": 1.5,\n    \"pesovolumen\": 1.5,\n    \"unidadMedida\": \"L\"\n  }\n]"
+				},
+				"url": {
+					"raw": "http://200.108.131.206:8051/ccr-rest-api/lt/api/v1/productos",
+					"protocol": "http",
+					"host": [
+						"200",
+						"108",
+						"131",
+						"206"
+					],
+					"port": "8051",
+					"path": [
+						"ccr-rest-api",
+						"lt",
+						"api",
+						"v1",
+						"productos"
+					]
+				},
+				"description": "Carga o actualiza el catálogo de productos. Clave única: `eancode` (long; puede superar el rango de int)."
+			},
+			"response": []
+		},
+		{
+			"name": "POST /tickets",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer ltk_KFYQNxRAls24J46tSwndn68UYPfp9_SfyumbVCa9_es"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "[\n  {\n    \"punto\": 101,\n    \"nroTicket\": \"A0001-00012345\",\n    \"fecha\": \"2026-06-08\",\n    \"hora\": \"14:35:20\",\n    \"eancode\": 7790001234567,\n    \"ean_desc\": \"Gaseosa Cola 1.5L\",\n    \"unidades_vendidas\": 3,\n    \"precio_regular\": 8500.00,\n    \"precio_promocional\": 7900.00,\n    \"tipo_venta\": \"PROMO\"\n  }\n]"
+				},
+				"url": {
+					"raw": "http://200.108.131.206:8051/ccr-rest-api/lt/api/v1/tickets",
+					"protocol": "http",
+					"host": [
+						"200",
+						"108",
+						"131",
+						"206"
+					],
+					"port": "8051",
+					"path": [
+						"ccr-rest-api",
+						"lt",
+						"api",
+						"v1",
+						"tickets"
+					]
+				},
+				"description": "Carga las líneas de venta de tickets.\n\nFormatos de fecha/hora:\n- `fecha`: yyyy-MM-dd\n- `hora`: HH:mm:ss"
+			},
+			"response": []
+		},
+		{
+			"name": "POST /personas",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer ltk_KFYQNxRAls24J46tSwndn68UYPfp9_SfyumbVCa9_es"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "[\n  {\n    \"punto\": 101,\n    \"nroTicket\": \"A0001-00012345\",\n    \"fecha\": \"2026-06-08\",\n    \"identificacion\": \"4567890\",\n    \"nombreyapellidoempresa\": \"Juan Pérez\"\n  }\n]"
+				},
+				"url": {
+					"raw": "http://200.108.131.206:8051/ccr-rest-api/lt/api/v1/personas",
+					"protocol": "http",
+					"host": [
+						"200",
+						"108",
+						"131",
+						"206"
+					],
+					"port": "8051",
+					"path": [
+						"ccr-rest-api",
+						"lt",
+						"api",
+						"v1",
+						"personas"
+					]
+				},
+				"description": "Carga los datos de la persona/empresa asociada a un ticket.\n\nFormato de fecha:\n- `fecha`: yyyy-MM-dd"
+			},
+			"response": []
+		}
+	]
+}
