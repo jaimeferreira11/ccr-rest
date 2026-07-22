@@ -631,7 +631,7 @@ public class ReporteInsService {
             setCellStringByHeader (row, headers, "Orden Apertura",
                     ordenAperturaMap.getOrDefault(normalizar(apertura), "0"));
             setCellIntByHeader    (row, headers, "YTD 1er Mes",
-                    derivarYtdInt(csv[tipoReporte.getIdxMes()], mesInicioFiscal));
+                    derivarYtdInt(mesInicioFiscal));
             setCellDateByHeader   (row, headers, "Fecha",
                     csv[tipoReporte.getIdxMes()], csv[tipoReporte.getIdxAno()], dateCellStyle);
             setCellStringByHeader (row, headers, "SUB_MARCA",              subMarca);
@@ -699,7 +699,7 @@ public class ReporteInsService {
                     ordenAperturaMap.getOrDefault(normalizar(apertura), "0"));
             setCellNumericByHeader(row, headers, "Volumen Unidades",       csv[tipoReporte.getIdxVolumenUnidades()]);
             setCellIntByHeader    (row, headers, "YTD 1er Mes",
-                    derivarYtdInt(csv[tipoReporte.getIdxMes()], mesInicioFiscal));
+                    derivarYtdInt(mesInicioFiscal));
             setCellDateByHeader   (row, headers, "Fecha",
                     csv[tipoReporte.getIdxMes()], csv[tipoReporte.getIdxAno()], dateCellStyle);
             setCellStringByHeader (row, headers, "Marca",                  csv[tipoReporte.getIdxMarca()]);
@@ -920,6 +920,12 @@ public class ReporteInsService {
      * del XSSFWorkbook. Debe invocarse ANTES de envolver con SXSSFWorkbook, ya que
      * SXSSF trata las filas existentes del XSSFSheet como "ya escritas a disco"
      * y no permite sobrescribirlas con createRow().
+     *
+     * <p>Usa eliminación masiva en O(n) (ver {@link #limpiarDatosHojaRapido}); el
+     * antiguo bucle {@code sheet.removeRow()} es O(n²) — sobre FACT/Total Empresa
+     * (~200.000 filas) eso tardaba decenas de minutos y disparaba el timeout de
+     * {@code InformeCleanupScheduler} (informe quedaba marcado ERROR aunque el
+     * async seguía corriendo en background y terminaba bien igual).</p>
      */
     private void limpiarDatosHoja(XSSFWorkbook wb, String sheetName) {
         XSSFSheet sheet = wb.getSheet(sheetName);
@@ -930,6 +936,59 @@ public class ReporteInsService {
         if (lastOldRow < 1)
             return;
 
+        int removed;
+        try {
+            removed = limpiarDatosHojaRapido(sheet);
+        } catch (Exception e) {
+            LOGGER.warn("Hoja '{}': vía rápida no disponible ({}), usando método estándar.",
+                        sheetName, e.toString());
+            removed = limpiarDatosHojaLento(sheet);
+        }
+        LOGGER.info("Hoja '{}': eliminadas {} filas de datos previas.", sheetName, removed);
+    }
+
+    /**
+     * Eliminación masiva de filas de datos en O(n), preservando el header (fila 0).
+     * Hay que limpiar las dos estructuras que mantiene XSSFSheet en sincronía: el
+     * cache interno {@code _rows} (SortedMap) y el bean XML {@code <sheetData>},
+     * recorrido con un {@code XmlCursor} (mantiene posición → O(n); {@code removeRow(idx)}
+     * es O(n²) porque XmlBeans reubica/navega el array en cada operación).
+     */
+    @SuppressWarnings("unchecked")
+    private int limpiarDatosHojaRapido(XSSFSheet sheet) throws Exception {
+        java.lang.reflect.Field field = org.apache.poi.xssf.usermodel.XSSFSheet.class.getDeclaredField("_rows");
+        field.setAccessible(true);
+        java.util.SortedMap<Integer, org.apache.poi.xssf.usermodel.XSSFRow> rows =
+                (java.util.SortedMap<Integer, org.apache.poi.xssf.usermodel.XSSFRow>) field.get(sheet);
+        org.apache.poi.xssf.usermodel.XSSFRow header = rows.get(0);
+        rows.clear();
+        if (header != null) {
+            rows.put(0, header);
+        }
+
+        org.openxmlformats.schemas.spreadsheetml.x2006.main.CTSheetData data =
+                sheet.getCTWorksheet().getSheetData();
+        int removed = 0;
+        org.apache.xmlbeans.XmlCursor cursor = data.newCursor();
+        try {
+            if (cursor.toFirstChild()) {
+                while (cursor.toNextSibling()) {
+                    cursor.removeXml();
+                    removed++;
+                }
+            }
+        } finally {
+            cursor.dispose();
+        }
+        return removed;
+    }
+
+    /**
+     * Método estándar de eliminación fila por fila (O(n²)). Sólo como respaldo si
+     * la vía rápida falla por incompatibilidad de internos de POI.
+     */
+    private int limpiarDatosHojaLento(XSSFSheet sheet) {
+        int lastOldRow = sheet.getLastRowNum();
         int removed = 0;
         for (int i = lastOldRow; i >= 1; i--) {
             org.apache.poi.xssf.usermodel.XSSFRow row = sheet.getRow(i);
@@ -938,7 +997,7 @@ public class ReporteInsService {
                 removed++;
             }
         }
-        LOGGER.info("Hoja '{}': eliminadas {} filas de datos previas.", sheetName, removed);
+        return removed;
     }
 
     /**
@@ -1951,13 +2010,16 @@ public class ReporteInsService {
     }
 
     /**
-     * YTD 1er Mes: 1 (Integer) si el mes del registro coincide con el inicio del año fiscal,
-     * null en caso contrario. Devuelve Integer (no String) porque la columna en el template
-     * está tipada como NÚMERO; escribirla como texto rompe la fórmula DAX
-     * {@code DATEADD('FACT'[Fecha]; -MAXX('FACT'; [YTD 1er Mes])+1; MONTH)}.
+     * YTD 1er Mes: el número del mes de inicio del año fiscal (S), escrito en TODAS las filas.
+     * La fórmula DAX {@code Fecha_YTD = DATEADD('FACT'[Fecha]; -MAXX('FACT';[YTD 1er Mes])+1; MONTH)}
+     * usa {@code MAXX([YTD 1er Mes])} como el mes de inicio: con S=1 el shift es 0 (YTD
+     * calendario, idéntico al comportamiento histórico); con S=7 el shift es -6 (jul→ene → YTD
+     * fiscal). Antes esta función devolvía un flag 1 solo en la fila del mes de inicio, lo que
+     * dejaba MAXX siempre en 1 (shift 0) y rompía el YTD fiscal. Devuelve Integer (no String)
+     * porque la columna en el template está tipada como NÚMERO.
      */
-    private Integer derivarYtdInt(String mes, int mesInicioFiscal) {
-        return String.valueOf(mesInicioFiscal).equals(mes != null ? mes.trim() : "") ? Integer.valueOf(1) : null;
+    private Integer derivarYtdInt(int mesInicioFiscal) {
+        return Integer.valueOf(mesInicioFiscal);
     }
 
     // -------------------------------------------------------------------------

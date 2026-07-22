@@ -36,13 +36,13 @@ public class LtTicket extends BaseEntidad implements Serializable {
     @Column(name = "ean_desc", length = 500)
     private String eanDesc;
 
-    @Column(name = "unidades_vendidas")
-    private Integer unidadesVendidas;
+    @Column(name = "unidades_vendidas", precision = 15, scale = 3)
+    private BigDecimal unidadesVendidas;
 
-    @Column(name = "precio_regular", precision = 15, scale = 2)
+    @Column(name = "precio_regular", precision = 15, scale = 0)
     private BigDecimal precioRegular;
 
-    @Column(name = "precio_promocional", precision = 15, scale = 2)
+    @Column(name = "precio_promocional", precision = 15, scale = 0)
     private BigDecimal precioPromocional;
 
     @Column(name = "tipo_venta", length = 10)
@@ -65,8 +65,8 @@ public class LtTicket extends BaseEntidad implements Serializable {
     public void setEancode(Long eancode) { this.eancode = eancode; }
     public String getEanDesc() { return eanDesc; }
     public void setEanDesc(String eanDesc) { this.eanDesc = eanDesc; }
-    public Integer getUnidadesVendidas() { return unidadesVendidas; }
-    public void setUnidadesVendidas(Integer unidadesVendidas) { this.unidadesVendidas = unidadesVendidas; }
+    public BigDecimal getUnidadesVendidas() { return unidadesVendidas; }
+    public void setUnidadesVendidas(BigDecimal unidadesVendidas) { this.unidadesVendidas = unidadesVendidas; }
     public BigDecimal getPrecioRegular() { return precioRegular; }
     public void setPrecioRegular(BigDecimal precioRegular) { this.precioRegular = precioRegular; }
     public BigDecimal getPrecioPromocional() { return precioPromocional; }
