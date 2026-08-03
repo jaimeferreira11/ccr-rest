@@ -9,6 +9,7 @@ import py.com.jaimeferreira.ccr.lt.repository.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 
 @Service
 public class LtIntegracionService {
@@ -52,14 +53,15 @@ public class LtIntegracionService {
     @Transactional
     public int guardarProductos(List<ProductoDTO> lista) {
         for (ProductoDTO dto : lista) {
-            LtProducto entity = productoRepo.findByEancode(dto.getEancode())
+            String eancode = Objects.toString(dto.getEancode(), null);
+            LtProducto entity = productoRepo.findByEancode(eancode)
                     .orElseGet(() -> {
                         LtProducto nuevo = new LtProducto();
                         nuevo.setFechaCreacion(LocalDateTime.now());
                         nuevo.setNombreUsuarioCreacion(USUARIO_SISTEMA);
                         return nuevo;
                     });
-            entity.setEancode(dto.getEancode());
+            entity.setEancode(eancode);
             entity.setDescripcion(dto.getDescripcion());
             entity.setIdSector(dto.getIdSector());
             entity.setSector(dto.getSector());
@@ -84,8 +86,9 @@ public class LtIntegracionService {
     @Transactional
     public int guardarTickets(List<TicketDTO> lista) {
         for (TicketDTO dto : lista) {
+            String eancode = Objects.toString(dto.getEancode(), null);
             LtTicket entity = ticketRepo
-                    .findByPuntoAndNroTicketAndEancode(dto.getPunto(), dto.getNroTicket(), dto.getEancode())
+                    .findByPuntoAndNroTicketAndEancode(dto.getPunto(), dto.getNroTicket(), eancode)
                     .orElseGet(() -> {
                         LtTicket nuevo = new LtTicket();
                         nuevo.setFechaCreacion(LocalDateTime.now());
@@ -96,7 +99,7 @@ public class LtIntegracionService {
             entity.setNroTicket(dto.getNroTicket());
             entity.setFecha(dto.getFecha());
             entity.setHora(dto.getHora());
-            entity.setEancode(dto.getEancode());
+            entity.setEancode(eancode);
             entity.setEanDesc(dto.getEan_desc());
             entity.setUnidadesVendidas(dto.getUnidades_vendidas());
             entity.setPrecioRegular(dto.getPrecio_regular());
