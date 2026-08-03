@@ -9,6 +9,8 @@
 > - [`INSIGHTS-SPEC.md`](INSIGHTS-SPEC.md) — spec funcional (tipos de informe, CSVs, API, BD).
 > - [`ano-fiscal-spec.md`](ano-fiscal-spec.md) — feature columna "Año Fiscal".
 > - [`slicers-independientes.md`](slicers-independientes.md).
+> - [`DASHBOARD-EXCEL-PROMPT.md`](DASHBOARD-EXCEL-PROMPT.md) — prompt para generar la hoja
+>   "Dashboard" con gráficos vinculados a las hojas de resumen del template.
 >
 > Código: `src/main/java/py/com/jaimeferreira/ccr/insights/service/ReporteInsService.java` (~1965 líneas).
 

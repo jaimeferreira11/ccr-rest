@@ -631,7 +631,7 @@ public class ReporteInsService {
             setCellStringByHeader (row, headers, "Orden Apertura",
                     ordenAperturaMap.getOrDefault(normalizar(apertura), "0"));
             setCellIntByHeader    (row, headers, "YTD 1er Mes",
-                    derivarYtdInt(mesInicioFiscal));
+                    derivarYtdInt(csv[tipoReporte.getIdxMes()], mesInicioFiscal));
             setCellDateByHeader   (row, headers, "Fecha",
                     csv[tipoReporte.getIdxMes()], csv[tipoReporte.getIdxAno()], dateCellStyle);
             setCellStringByHeader (row, headers, "SUB_MARCA",              subMarca);
@@ -699,7 +699,7 @@ public class ReporteInsService {
                     ordenAperturaMap.getOrDefault(normalizar(apertura), "0"));
             setCellNumericByHeader(row, headers, "Volumen Unidades",       csv[tipoReporte.getIdxVolumenUnidades()]);
             setCellIntByHeader    (row, headers, "YTD 1er Mes",
-                    derivarYtdInt(mesInicioFiscal));
+                    derivarYtdInt(csv[tipoReporte.getIdxMes()], mesInicioFiscal));
             setCellDateByHeader   (row, headers, "Fecha",
                     csv[tipoReporte.getIdxMes()], csv[tipoReporte.getIdxAno()], dateCellStyle);
             setCellStringByHeader (row, headers, "Marca",                  csv[tipoReporte.getIdxMarca()]);
@@ -971,8 +971,8 @@ public class ReporteInsService {
         int removed = 0;
         org.apache.xmlbeans.XmlCursor cursor = data.newCursor();
         try {
-            if (cursor.toFirstChild()) {
-                while (cursor.toNextSibling()) {
+            if (cursor.toFirstChild() && cursor.toNextSibling()) {
+                while (cursor.currentTokenType() == org.apache.xmlbeans.XmlCursor.TokenType.START) {
                     cursor.removeXml();
                     removed++;
                 }
@@ -2010,16 +2010,13 @@ public class ReporteInsService {
     }
 
     /**
-     * YTD 1er Mes: el número del mes de inicio del año fiscal (S), escrito en TODAS las filas.
-     * La fórmula DAX {@code Fecha_YTD = DATEADD('FACT'[Fecha]; -MAXX('FACT';[YTD 1er Mes])+1; MONTH)}
-     * usa {@code MAXX([YTD 1er Mes])} como el mes de inicio: con S=1 el shift es 0 (YTD
-     * calendario, idéntico al comportamiento histórico); con S=7 el shift es -6 (jul→ene → YTD
-     * fiscal). Antes esta función devolvía un flag 1 solo en la fila del mes de inicio, lo que
-     * dejaba MAXX siempre en 1 (shift 0) y rompía el YTD fiscal. Devuelve Integer (no String)
-     * porque la columna en el template está tipada como NÚMERO.
+     * YTD 1er Mes: 1 (Integer) si el mes del registro coincide con el inicio del año fiscal,
+     * null en caso contrario. Devuelve Integer (no String) porque la columna en el template
+     * está tipada como NÚMERO; escribirla como texto rompe la fórmula DAX
+     * {@code DATEADD('FACT'[Fecha]; -MAXX('FACT'; [YTD 1er Mes])+1; MONTH)}.
      */
-    private Integer derivarYtdInt(int mesInicioFiscal) {
-        return Integer.valueOf(mesInicioFiscal);
+    private Integer derivarYtdInt(String mes, int mesInicioFiscal) {
+        return String.valueOf(mesInicioFiscal).equals(mes != null ? mes.trim() : "") ? Integer.valueOf(1) : null;
     }
 
     // -------------------------------------------------------------------------

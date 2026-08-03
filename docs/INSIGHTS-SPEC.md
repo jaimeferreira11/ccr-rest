@@ -18,6 +18,8 @@ y el sistema genera un Excel con tablas dinamicas, hojas ocultas de datos y graf
 
 El Excel resultante contiene:
 - **Hojas visibles:** INICIO, Reales, Acumulados, Variaciones, Distribucion Fisica, Distribucion Ponderada, Precios PP, Evol Segmentos, Evol Canales (todas con pivot tables y slicers)
+  - Prompt de referencia para agregar una hoja "Dashboard" con gráficos resumen vinculados a
+    estas hojas: [`DASHBOARD-EXCEL-PROMPT.md`](DASHBOARD-EXCEL-PROMPT.md).
 - **Hojas ocultas (datos):** FACT, Total Empresa, Calendario, DIM
 
 ---
