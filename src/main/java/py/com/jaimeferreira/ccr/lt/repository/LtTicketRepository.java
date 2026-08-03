@@ -5,5 +5,5 @@ import py.com.jaimeferreira.ccr.lt.entity.LtTicket;
 import java.util.Optional;
 
 public interface LtTicketRepository extends JpaRepository<LtTicket, Long> {
-    Optional<LtTicket> findByPuntoAndNroTicketAndEancode(Integer punto, String nroTicket, Long eancode);
+    Optional<LtTicket> findByPuntoAndNroTicketAndEancode(Integer punto, String nroTicket, String eancode);
 }
