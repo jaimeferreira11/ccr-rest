@@ -15,8 +15,8 @@ public class LtProducto extends BaseEntidad implements Serializable {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "eancode", nullable = false, unique = true)
-    private Long eancode;
+    @Column(name = "eancode", nullable = false, unique = true, length = 20)
+    private String eancode;
 
     @Column(name = "descripcion", length = 500)
     private String descripcion;
@@ -65,8 +65,8 @@ public class LtProducto extends BaseEntidad implements Serializable {
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
-    public Long getEancode() { return eancode; }
-    public void setEancode(Long eancode) { this.eancode = eancode; }
+    public String getEancode() { return eancode; }
+    public void setEancode(String eancode) { this.eancode = eancode; }
     public String getDescripcion() { return descripcion; }
     public void setDescripcion(String descripcion) { this.descripcion = descripcion; }
     public Integer getIdSector() { return idSector; }
