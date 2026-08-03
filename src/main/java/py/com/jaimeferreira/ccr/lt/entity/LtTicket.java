@@ -30,8 +30,8 @@ public class LtTicket extends BaseEntidad implements Serializable {
     @Column(name = "hora")
     private LocalTime hora;
 
-    @Column(name = "eancode", nullable = false)
-    private Long eancode;
+    @Column(name = "eancode", nullable = false, length = 20)
+    private String eancode;
 
     @Column(name = "ean_desc", length = 500)
     private String eanDesc;
@@ -61,8 +61,8 @@ public class LtTicket extends BaseEntidad implements Serializable {
     public void setFecha(LocalDate fecha) { this.fecha = fecha; }
     public LocalTime getHora() { return hora; }
     public void setHora(LocalTime hora) { this.hora = hora; }
-    public Long getEancode() { return eancode; }
-    public void setEancode(Long eancode) { this.eancode = eancode; }
+    public String getEancode() { return eancode; }
+    public void setEancode(String eancode) { this.eancode = eancode; }
     public String getEanDesc() { return eanDesc; }
     public void setEanDesc(String eanDesc) { this.eanDesc = eanDesc; }
     public BigDecimal getUnidadesVendidas() { return unidadesVendidas; }
