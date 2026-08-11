@@ -286,16 +286,32 @@ public class AdminPlataformaController {
 
         if (hayDatos) {
             long t0 = System.currentTimeMillis();
+            TipoReporte tipoDatos = null;
             try {
+                if (tipoReporte == null || tipoReporte.trim().isEmpty()) {
+                    throw new UnknownResourceException("Debe indicar el tipo de reporte (NORMAL o CADENA) al subir datos base.");
+                }
+                try {
+                    tipoDatos = TipoReporte.valueOf(tipoReporte.trim().toUpperCase());
+                } catch (IllegalArgumentException e) {
+                    throw new UnknownResourceException("Tipo de reporte inválido: " + tipoReporte
+                            + ". Valores válidos: NORMAL, CADENA");
+                }
                 validarCsv(csvDatosBase, "datos base");
-                reporteInsService.guardarArchivoBase(csvDatosBase, codClienteNorm, "datos_base.csv");
-                response.put("datosBase", "datos_base.csv guardado correctamente");
-                LOGGER.info("Datos base guardados para cliente: {}", codClienteNorm);
-                auditar(EventoAuditoriaIns.DATOS_BASE_SUBIDO, ResultadoAuditoria.EXITO, codClienteNorm, null, null,
-                        detalle("nombreArchivo", "datos_base.csv",
+                try {
+                    reporteInsService.validarEstructuraDatosBase(csvDatosBase, tipoDatos);
+                } catch (RuntimeException e) {
+                    throw new UnknownResourceException(e.getMessage());
+                }
+                String nombreArchivo = ReporteInsService.datosBaseFilename(tipoDatos);
+                reporteInsService.guardarArchivoBase(csvDatosBase, codClienteNorm, nombreArchivo);
+                response.put("datosBase", nombreArchivo + " guardado correctamente");
+                LOGGER.info("Datos base ({}) guardados para cliente: {}", tipoDatos, codClienteNorm);
+                auditar(EventoAuditoriaIns.DATOS_BASE_SUBIDO, ResultadoAuditoria.EXITO, codClienteNorm, null, tipoDatos,
+                        detalle("nombreArchivo", nombreArchivo,
                                 "duracionMs", System.currentTimeMillis() - t0));
             } catch (RuntimeException e) {
-                auditar(EventoAuditoriaIns.DATOS_BASE_SUBIDO, ResultadoAuditoria.ERROR, codClienteNorm, null, null,
+                auditar(EventoAuditoriaIns.DATOS_BASE_SUBIDO, ResultadoAuditoria.ERROR, codClienteNorm, null, tipoDatos,
                         detalle("mensajeError", e.getMessage(),
                                 "duracionMs", System.currentTimeMillis() - t0));
                 throw e;

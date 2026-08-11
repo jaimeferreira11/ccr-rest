@@ -1541,6 +1541,42 @@ public class ReporteInsService {
     }
 
     /**
+     * Valida que el CSV de datos base subido por administración tenga los headers esperados
+     * para el tipo de reporte indicado (mismo chequeo que se aplica en generación, pero
+     * ejecutado al momento del upload para dar feedback inmediato en vez de esperar a la
+     * próxima generación de reporte).
+     */
+    public void validarEstructuraDatosBase(MultipartFile csvDatosBase, TipoReporte tipoReporte) {
+        byte[] csvBytes;
+        try {
+            csvBytes = csvDatosBase.getBytes();
+        }
+        catch (IOException e) {
+            throw new RuntimeException("Error al leer el CSV de datos base: " + e.getMessage(), e);
+        }
+
+        Charset encoding = detectarEncoding(csvBytes);
+        try (CSVReader reader = new CSVReaderBuilder(
+                                                     new InputStreamReader(new ByteArrayInputStream(csvBytes),
+                                                                           encoding))
+                                                                                                   .withCSVParser(new CSVParserBuilder().withSeparator(CSV_SEPARATOR)
+                                                                                                                                        .build())
+                                                                                                   .build()) {
+            String[] headers = reader.readNext();
+            if (headers == null) {
+                throw new RuntimeException("El CSV de datos base está vacío.");
+            }
+            for (int i = 0; i < headers.length; i++) {
+                headers[i] = headers[i].trim();
+            }
+            validarHeadersCsv(headers, tipoReporte);
+        }
+        catch (IOException | CsvValidationException e) {
+            throw new RuntimeException("Error al leer el CSV de datos base: " + e.getMessage(), e);
+        }
+    }
+
+    /**
      * Guarda un archivo base (filtros o datos) subido por administración.
      */
     public String guardarArchivoBase(MultipartFile archivo, String codCliente, String nombreArchivo) {
